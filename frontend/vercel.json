@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        { "source": "/api/:path*", "destination": "https://git-painted-backend.vercel.app/api/:path*" },
+        { "source": "/p/:id", "destination": "https://git-painted-backend.vercel.app/p/:id" },
+        { "source": "/og/:path*", "destination": "https://git-painted-backend.vercel.app/og/:path*" },
+        { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    ]
+}
