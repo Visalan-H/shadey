@@ -35,6 +35,7 @@ function input(overrides: Partial<PaintInput> = {}): PaintInput {
         shareUrl: 'https://paint.test/s/abc',
         octokit: new Octokit({ auth: token, throttle: { enabled: false } }),
         gitBaseUrl: git.baseUrl,
+        pushRetryDelaysMs: [0, 0],
         ...overrides,
     };
 }
@@ -113,7 +114,45 @@ describe('paint', () => {
                 HttpResponse.json({ message: 'Must have admin rights' }, { status: 403 }),
             ),
         );
-        await expect(paint(input({ repoName: 'paint-broken-2' }))).rejects.toBeInstanceOf(PushError);
+        const err = await paint(input({ repoName: 'paint-broken-2' })).catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(PushError);
+        expect(err).toMatchObject({ repoUrl: 'https://github.com/octocat/paint-broken-2', repoLeftBehind: true });
+    });
+
+    it('marks the repo as cleaned up when the delete works', async () => {
+        mockGitHub({ createBare: false });
+        const err = await paint(input({ repoName: 'paint-broken-3' })).catch((e: unknown) => e);
+        expect(err).toMatchObject({ repoUrl: 'https://github.com/octocat/paint-broken-3', repoLeftBehind: false });
+    });
+
+    it('retries a push GitHub refuses right after creating the repo', async () => {
+        const calls = mockGitHub({ createBare: true });
+        let refused = 0;
+        // The first contact with the new repo fails, as if GitHub had not finished setting it up.
+        api.use(
+            http.get(
+                `${git.baseUrl}/octocat/paint-retry.git/info/refs`,
+                () => {
+                    refused++;
+                    return new HttpResponse('Repository not found', { status: 404 });
+                },
+                { once: true },
+            ),
+        );
+        const result = await paint(input({ repoName: 'paint-retry', pushRetryDelaysMs: [10, 10] }));
+        expect(refused).toBe(1);
+        expect(result.commitCount).toBe(3);
+        expect((await git.git('octocat/paint-retry', 'rev-parse', 'main')).trim()).toBe(result.headOid);
+        expect(calls.deleted).toEqual([]);
+    });
+
+    it('gives up after the last retry', async () => {
+        mockGitHub({ createBare: false });
+        const before = git.requests.length;
+        await expect(paint(input({ repoName: 'paint-never' }))).rejects.toBeInstanceOf(PushError);
+        const attempts = git.requests.slice(before).filter((r) => r.url.includes('/paint-never.git/info/refs'));
+        // Each attempt is an anonymous probe plus an authenticated retry.
+        expect(attempts.filter((r) => r.authorization).length).toBe(3);
     });
 
     it('validates the plan before creating anything', async () => {

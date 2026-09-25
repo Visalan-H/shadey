@@ -1,7 +1,7 @@
 import { Octokit } from 'octokit';
 import { buildCommits, type PlanDay } from './buildCommits.js';
 import { createPaintRepo, deleteRepo, type PaintRepo } from './github.js';
-import { pushCommits } from './pushRepo.js';
+import { pushCommits, PushError, type PushResult } from './pushRepo.js';
 import { paintReadme } from './readme.js';
 
 export { buildCommits, MAX_PER_DAY, MAX_TOTAL, PlanError } from './buildCommits.js';
@@ -31,6 +31,28 @@ export interface PaintInput {
     // Overridable for tests.
     octokit?: Octokit;
     gitBaseUrl?: string;
+    // Waits before each push retry; its length is the number of retries.
+    pushRetryDelaysMs?: number[];
+}
+
+// GitHub sometimes refuses pushes for a few seconds right after a repo is created.
+export const PUSH_RETRY_DELAYS_MS = [1000, 2000];
+
+// A rejected token will not start working on its own, so don't wait around for it.
+function isAuthFailure(err: unknown): boolean {
+    const cause = (err as { cause?: { code?: string; data?: { statusCode?: number } } }).cause;
+    return cause?.code === 'HttpError' && cause.data?.statusCode === 401;
+}
+
+async function pushWithRetry(push: () => Promise<PushResult>, delays: number[]): Promise<PushResult> {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await push();
+        } catch (err) {
+            if (!(err instanceof PushError) || attempt >= delays.length || isAuthFailure(err)) throw err;
+            await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+        }
+    }
 }
 
 export interface PaintResult {
@@ -67,18 +89,28 @@ export async function paint(input: PaintInput): Promise<PaintResult> {
     });
 
     const gitBaseUrl = (input.gitBaseUrl ?? 'https://github.com').replace(/\/+$/, '');
+    const readme = paintReadme({ login: user.login, text, appUrl, shareUrl });
     try {
-        const pushed = await pushCommits({
-            url: `${gitBaseUrl}/${repo.owner}/${repo.name}.git`,
-            token,
-            commits,
-            readme: paintReadme({ login: user.login, text, appUrl, shareUrl }),
-            branch: repo.defaultBranch,
-        });
+        const pushed = await pushWithRetry(
+            () =>
+                pushCommits({
+                    url: `${gitBaseUrl}/${repo.owner}/${repo.name}.git`,
+                    token,
+                    commits,
+                    readme,
+                    branch: repo.defaultBranch,
+                }),
+            input.pushRetryDelaysMs ?? PUSH_RETRY_DELAYS_MS,
+        );
         return { repo, ...pushed };
     } catch (err) {
-        // Don't leave a half-made repo behind; the original error is what matters.
-        await deleteRepo(octokit, repo.owner, repo.name).catch(() => undefined);
+        // Try not to leave a half-made repo behind. We never ask for delete_repo, so this
+        // usually fails (403/404); the push error is what matters, plus where the leftover is.
+        const deleted = await deleteRepo(octokit, repo.owner, repo.name).catch(() => false);
+        if (err instanceof PushError) {
+            err.repoUrl = repo.htmlUrl;
+            err.repoLeftBehind = !deleted;
+        }
         throw err;
     }
 }

@@ -10,6 +10,10 @@ export interface PushResult {
 }
 
 export class PushError extends Error {
+    // Set by paint() when the repo was created but the push failed and cleanup did not delete it.
+    repoUrl?: string;
+    repoLeftBehind = false;
+
     constructor(message: string, options?: { cause?: unknown }) {
         super(message, options);
         this.name = 'PushError';
