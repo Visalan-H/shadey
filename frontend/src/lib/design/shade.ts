@@ -1,9 +1,8 @@
 import type { Calendar, Level } from '../types';
 import type { CellStatus } from './placement';
 
-// How GitHub picks shades is not documented. The model here follows its older
-// calendar code (a d3 quantile scale): take every day with count > 0 in the
-// displayed calendar, compute the 25th/50th/75th percentiles of those counts
+// How GitHub picks shades is not documented, so this is a quartile model: take every
+// day with count > 0 in the displayed calendar, compute the 25th/50th/75th percentiles of those counts
 // (linear interpolation between ranks), and give a day
 //   level 1 if count < q1, 2 if q1 <= count < q2, 3 if q2 <= count < q3, 4 if count >= q3.
 // So ties at the top (a lone day, or every day equal) show as the darkest shade.
