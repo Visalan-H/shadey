@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     bestOffset,
     buildPreview,
@@ -21,6 +21,7 @@ import { PaintDone } from './PaintDone';
 import { PixelEditor } from './PixelEditor';
 import { PlacementControls } from './PlacementControls';
 import { ShadePicker } from './ShadePicker';
+import { ShareButtons } from '../share/ShareButtons';
 
 interface Props {
     calendar: Calendar;
@@ -52,6 +53,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const [serverRepoError, setServerRepoError] = useState<string | null>(null);
     const [done, setDone] = useState<PaintResult | null>(null);
     const { data: me } = useMe();
+    const graphRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!done) saveDraft(draft);
@@ -124,7 +126,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="rounded-md border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-950">
+            <div ref={graphRef} className="rounded-md border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-950">
                 <Graph
                     calendar={calendar}
                     focusWeek={width > 0 ? offset + Math.floor(width / 2) : undefined}
@@ -137,7 +139,9 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
             </div>
 
             {done ? (
-                <PaintDone result={done} onPaintAnother={paintAnother} />
+                <PaintDone result={done} onPaintAnother={paintAnother}>
+                    <ShareButtons shareId={done.shareId} text={draft.text} captureRef={graphRef} />
+                </PaintDone>
             ) : (
                 <div className="flex flex-col gap-6">
                     <section className="flex flex-col gap-3">
