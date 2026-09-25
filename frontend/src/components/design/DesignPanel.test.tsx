@@ -139,6 +139,16 @@ describe('DesignPanel', () => {
         expect(onShowMine).toHaveBeenCalledWith('mona');
     });
 
+    it('needs the repo permission before painting privately', async () => {
+        mockApi();
+        renderPanel();
+        await userEvent.type(screen.getByLabelText('Text'), 'Hi');
+        await userEvent.click(screen.getByLabelText('Private repo'));
+        expect(screen.getByText(/Private contributions/)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Grant permission on GitHub' })).toHaveAttribute('href', expect.stringContaining('scope=repo'));
+        expect(await screen.findByRole('button', { name: 'Paint' })).toBeDisabled();
+    });
+
     it('shows the daily limit in hours', async () => {
         mockApi({ paint: () => json({ error: 'limit', retryAfterSeconds: 7200 }, 429) });
         renderPanel();

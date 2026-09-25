@@ -101,6 +101,16 @@ function PaintErrorMessage({ error }: { error: PaintError }) {
                 .
             </>
         );
+    } else if (body.needScope === 'repo') {
+        message = (
+            <>
+                Private repos need one more GitHub permission.{' '}
+                <a href={signInUrl(undefined, 'repo')} className={linkClass}>
+                    Grant it
+                </a>
+                .
+            </>
+        );
     } else if (status === 429) {
         const hours = hoursUntil(body.retryAfterSeconds);
         message = `You've reached today's limit of 5 paintings. Try again in about ${hours} hour${hours === 1 ? '' : 's'}.`;
