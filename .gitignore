@@ -13,3 +13,4 @@ build/
 *.iso
 .vercel/
 coverage/
+!.env.example
