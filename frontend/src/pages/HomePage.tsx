@@ -1,9 +1,9 @@
 import { useSearchParams } from 'react-router';
-import { Graph } from '../components/Graph';
+import { DesignPanel } from '../components/design/DesignPanel';
 import { UsernameForm } from '../components/UsernameForm';
 import { calendarErrorMessage, isValidLogin, parseYear, totalContributions, useCalendar } from '../lib/calendar';
 
-// Preview + design + paint. The design panel goes below GraphSection.
+// Preview + design + paint.
 export function HomePage() {
     const [params, setParams] = useSearchParams();
     const rawLogin = params.get('u') ?? '';
@@ -38,7 +38,12 @@ export function HomePage() {
     );
 }
 
-export function GraphSection({ login, year }: { login: string; year?: number }) {
+interface GraphSectionProps {
+    login: string;
+    year?: number;
+}
+
+export function GraphSection({ login, year }: GraphSectionProps) {
     const { data, error, isPending } = useCalendar(login, year);
 
     if (isPending) {
@@ -73,9 +78,8 @@ export function GraphSection({ login, year }: { login: string; year?: number }) 
                     · {total.toLocaleString()} contribution{total === 1 ? '' : 's'} {year ? `in ${year}` : 'in the last year'}
                 </span>
             </h2>
-            <div className="rounded-md border border-neutral-200 p-2 dark:border-neutral-800">
-                <Graph calendar={data} />
-            </div>
+            {/* Keyed so switching graphs starts a fresh design, or the draft saved for that graph. */}
+            <DesignPanel key={`${data.login}-${year ?? 'rolling'}`} calendar={data} year={year} />
         </section>
     );
 }

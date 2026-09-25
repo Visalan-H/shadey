@@ -4,3 +4,5 @@ export type { BestPlacement, CellStatus, ConflictCell, Conflicts, PlacedCell, Pl
 export { bestOffset, cellsFor, conflicts, defaultOffset, maxOffset } from './placement';
 export type { Calibration, CommitDay, PaintCell, ThresholdFn, Thresholds } from './shade';
 export { calibrate, commitPlan, levelFor, levelsFor, quartileThresholds } from './shade';
+export type { Preview, PreviewCell } from './preview';
+export { buildPreview, cellKey, todayUtc } from './preview';
