@@ -11,3 +11,5 @@ build/
 *.dll
 *.zip
 *.iso
+.vercel/
+coverage/
