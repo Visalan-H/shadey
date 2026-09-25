@@ -65,6 +65,18 @@ describe('DesignPanel', () => {
         expect(within(editor).getAllByRole('button')).toHaveLength(7 * 5);
     });
 
+    it('calibrates the commit count to the chosen shade', async () => {
+        // Ten busy weeks at 8 a day: the darkest shade needs as many, the lightest just one.
+        renderPanel(calendar((_d, week) => (week < 10 ? 8 : 0)));
+        await userEvent.type(screen.getByLabelText('Text'), 'Hi');
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~160 commits (8 per day)');
+
+        await userEvent.click(screen.getByRole('button', { name: 'Shade 1' }));
+        expect(screen.getByRole('button', { name: 'Shade 1' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~20 commits (1 per day)');
+        expect(document.querySelectorAll('[data-level="1"]')).toHaveLength(20);
+    });
+
     it('updates the graph live while drawing', async () => {
         renderPanel();
         await userEvent.click(screen.getByRole('tab', { name: 'Draw' }));

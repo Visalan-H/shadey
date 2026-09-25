@@ -11,10 +11,11 @@ import {
     todayUtc,
     trimPattern,
 } from '../../lib/design';
-import type { Calendar, Pattern } from '../../lib/types';
+import type { Calendar, Pattern, Shade } from '../../lib/types';
 import { Graph } from '../Graph';
 import { PixelEditor } from './PixelEditor';
 import { PlacementControls } from './PlacementControls';
+import { ShadePicker } from './ShadePicker';
 
 interface Props {
     calendar: Calendar;
@@ -23,8 +24,6 @@ interface Props {
 
 const MAX_TEXT = 30;
 const BLANK_WIDTH = 20;
-// Drawn in the darkest shade until the shade picker lands.
-const SHADE = 4;
 
 // Text gets a blank column either side in the editor, so it can be touched up at the edges.
 function editorStart(text: string): Pattern {
@@ -43,6 +42,7 @@ export function DesignPanel({ calendar, year }: Props) {
     const [drawn, setDrawn] = useState<Pattern | null>(null);
     const [userOffset, setUserOffset] = useState<number | null>(null);
     const [bestNote, setBestNote] = useState<string | null>(null);
+    const [shade, setShade] = useState<Shade>(4);
 
     const mode = year ? 'year' : 'rolling';
     const today = todayUtc();
@@ -52,7 +52,7 @@ export function DesignPanel({ calendar, year }: Props) {
     const maxOffset = maxOffsetFor(calendar, placed);
     const offset = Math.min(maxOffset, Math.max(0, userOffset ?? defaultOffset(calendar, placed, mode, today)));
 
-    const preview = useMemo(() => buildPreview(calendar, placed, offset, SHADE, today), [calendar, placed, offset, today]);
+    const preview = useMemo(() => buildPreview(calendar, placed, offset, shade, today), [calendar, placed, offset, shade, today]);
 
     function findBest() {
         const best = bestOffset(calendar, placed, mode, today);
@@ -146,6 +146,8 @@ export function DesignPanel({ calendar, year }: Props) {
                         tooWide={tooWide}
                     />
                 )}
+
+                <ShadePicker shade={shade} onChange={setShade} calibration={width > 0 && !tooWide ? preview.calibration : null} />
             </div>
         </div>
     );

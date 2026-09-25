@@ -19,3 +19,6 @@ export interface Calendar {
 
 // A pattern is 7 rows (Sunday..Saturday) by N week-columns; true = paint this cell.
 export type Pattern = boolean[][];
+
+// A painted cell's target shade: GitHub's levels 1-4.
+export type Shade = Exclude<Level, 0>;
