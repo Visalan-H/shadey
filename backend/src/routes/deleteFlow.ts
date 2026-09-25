@@ -9,9 +9,15 @@ import { fetchProfile } from '../services/githubOAuth.js';
 import { deleteRepo } from '../services/paint/github.js';
 import { cookieOptions, signToken, verifyToken } from '../services/session.js';
 
-// "Delete for me": a one-off GitHub authorization with only delete_repo, used once and thrown away,
+// "Delete for me": a one-off GitHub authorization with delete_repo, used once and thrown away,
 // so the app never holds a token that can delete repos.
 export const router = Router();
+
+// A token without `repo` can't see a private repo, so its delete 404s and would read as
+// "already gone". Private paintings ask for both; the token is revoked right after either way.
+export function deleteScopes(isPrivate: boolean) {
+    return isPrivate ? ['delete_repo', 'repo'] : ['delete_repo'];
+}
 
 const DELETE_COOKIE = 'gp_delete';
 const DELETE_AUDIENCE = 'delete-state';
@@ -59,14 +65,14 @@ router.get('/api/auth/delete', requireUser, async (req, res) => {
         return;
     }
     await connectDb();
-    const painting = await PaintingModel.findOne({ shareId, userId: req.user!._id, status: 'painted' }).select('shareId').lean();
+    const painting = await PaintingModel.findOne({ shareId, userId: req.user!._id, status: 'painted' }).select('shareId isPrivate').lean();
     if (!painting) {
         res.redirect(resultUrl('delete_error', shareId));
         return;
     }
 
     const state = generateState();
-    const url = deleteClient().createAuthorizationURL(state, ['delete_repo']);
+    const url = deleteClient().createAuthorizationURL(state, deleteScopes(painting.isPrivate));
     const token = await signToken({ state, shareId, uid: req.user!.id }, DELETE_AUDIENCE, `${DELETE_TTL_MS / 1000}s`);
     res.cookie(DELETE_COOKIE, token, cookieOptions(DELETE_TTL_MS));
     res.redirect(url.toString());
@@ -101,7 +107,8 @@ router.get(CALLBACK_PATH, async (req, res) => {
         const accessToken = (await deleteClient().validateAuthorizationCode(code)).accessToken();
         try {
             const profile = await fetchProfile(accessToken);
-            if (!profile.scopes.includes('delete_repo') || profile.githubId !== user.githubId) {
+            const granted = deleteScopes(painting.isPrivate).every((s) => profile.scopes.includes(s));
+            if (!granted || profile.githubId !== user.githubId) {
                 fail();
                 return;
             }
