@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { makeCalendar } from '../../lib/design/testCalendar';
@@ -53,5 +53,24 @@ describe('DesignPanel', () => {
         renderPanel(calendar(), { rolling: true });
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
         expect(screen.getByText(/slides left every week/)).toBeInTheDocument();
+    });
+
+    it('starts the pixel editor from the text', async () => {
+        renderPanel();
+        await userEvent.type(screen.getByLabelText('Text'), 'I');
+        await userEvent.click(screen.getByRole('tab', { name: 'Draw' }));
+        const editor = screen.getByRole('group', { name: 'Pixel editor' });
+        // "I" plus a blank column either side.
+        expect(within(editor).getAllByRole('button', { pressed: true })).toHaveLength(9);
+        expect(within(editor).getAllByRole('button')).toHaveLength(7 * 5);
+    });
+
+    it('updates the graph live while drawing', async () => {
+        renderPanel();
+        await userEvent.click(screen.getByRole('tab', { name: 'Draw' }));
+        expect(paintedCells()).toHaveLength(0);
+        await userEvent.click(screen.getByRole('button', { name: 'Monday, column 3' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Tuesday, column 4' }));
+        expect(paintedCells()).toHaveLength(2);
     });
 });
