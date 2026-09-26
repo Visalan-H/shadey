@@ -33,7 +33,7 @@ export function HomePage() {
                     onYearChange={(y) => update(login, y)}
                 />
             </div>
-            {login && <GraphSection login={login} year={year} />}
+            {login && <GraphSection login={login} year={year} onShowMine={(l) => update(l, year)} />}
         </div>
     );
 }
@@ -41,9 +41,10 @@ export function HomePage() {
 interface GraphSectionProps {
     login: string;
     year?: number;
+    onShowMine: (login: string) => void;
 }
 
-export function GraphSection({ login, year }: GraphSectionProps) {
+export function GraphSection({ login, year, onShowMine }: GraphSectionProps) {
     const { data, error, isPending } = useCalendar(login, year);
 
     if (isPending) {
@@ -79,7 +80,7 @@ export function GraphSection({ login, year }: GraphSectionProps) {
                 </span>
             </h2>
             {/* Keyed so switching graphs starts a fresh design, or the draft saved for that graph. */}
-            <DesignPanel key={`${data.login}-${year ?? 'rolling'}`} calendar={data} year={year} />
+            <DesignPanel key={`${data.login}-${year ?? 'rolling'}`} calendar={data} year={year} onShowMine={onShowMine} />
         </section>
     );
 }

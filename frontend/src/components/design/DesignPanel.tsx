@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     bestOffset,
     buildPreview,
@@ -11,8 +11,12 @@ import {
     todayUtc,
     trimPattern,
 } from '../../lib/design';
+import { clearDraft, loadDraft, saveDraft, type Draft } from '../../lib/draft';
+import { defaultRepoName, repoNameError, type PaintRequest, type PaintResult } from '../../lib/paint';
 import type { Calendar, Pattern, Shade } from '../../lib/types';
 import { Graph } from '../Graph';
+import { PaintAction } from './PaintAction';
+import { PaintDone } from './PaintDone';
 import { PixelEditor } from './PixelEditor';
 import { PlacementControls } from './PlacementControls';
 import { ShadePicker } from './ShadePicker';
@@ -20,6 +24,7 @@ import { ShadePicker } from './ShadePicker';
 interface Props {
     calendar: Calendar;
     year?: number;
+    onShowMine: (login: string) => void;
 }
 
 const MAX_TEXT = 30;
@@ -33,26 +38,59 @@ function editorStart(text: string): Pattern {
     return pattern.map((row) => [false, ...row, false]);
 }
 
+function fresh(login: string, year: number | undefined): Draft {
+    return { login, year, source: 'text', text: '', drawn: null, offset: null, shade: 4, repoName: null, isPrivate: false };
+}
+
 const inputClass =
     'min-w-0 rounded-md border border-neutral-300 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900 aria-[invalid=true]:border-red-500';
 
-export function DesignPanel({ calendar, year }: Props) {
-    const [source, setSource] = useState<'text' | 'draw'>('text');
-    const [text, setText] = useState('');
-    const [drawn, setDrawn] = useState<Pattern | null>(null);
-    const [userOffset, setUserOffset] = useState<number | null>(null);
+export function DesignPanel({ calendar, year, onShowMine }: Props) {
+    const [draft, setDraft] = useState<Draft>(() => loadDraft(calendar.login, year) ?? fresh(calendar.login, year));
     const [bestNote, setBestNote] = useState<string | null>(null);
-    const [shade, setShade] = useState<Shade>(4);
+    const [serverRepoError, setServerRepoError] = useState<string | null>(null);
+    const [done, setDone] = useState<PaintResult | null>(null);
+
+    useEffect(() => {
+        if (!done) saveDraft(draft);
+    }, [draft, done]);
+
+    const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
     const mode = year ? 'year' : 'rolling';
     const today = todayUtc();
-    const placed = useMemo(() => trimPattern(source === 'draw' && drawn ? drawn : textToPattern(text)), [source, drawn, text]);
+    const placed = useMemo(
+        () => trimPattern(draft.source === 'draw' && draft.drawn ? draft.drawn : textToPattern(draft.text)),
+        [draft.source, draft.drawn, draft.text],
+    );
     const width = patternWidth(placed);
     const tooWide = width > calendar.weeks.length;
     const maxOffset = maxOffsetFor(calendar, placed);
-    const offset = Math.min(maxOffset, Math.max(0, userOffset ?? defaultOffset(calendar, placed, mode, today)));
+    const offset = Math.min(maxOffset, Math.max(0, draft.offset ?? defaultOffset(calendar, placed, mode, today)));
 
-    const preview = useMemo(() => buildPreview(calendar, placed, offset, shade, today), [calendar, placed, offset, shade, today]);
+    const preview = useMemo(() => buildPreview(calendar, placed, offset, draft.shade, today), [calendar, placed, offset, draft.shade, today]);
+
+    const repoName = draft.repoName ?? defaultRepoName(draft.text || (draft.source === 'draw' ? 'pixels' : ''));
+    const repoError = repoNameError(repoName) ?? serverRepoError;
+
+    let blocked: string | null = null;
+    if (width === 0) blocked = draft.source === 'text' ? 'Type some text to paint.' : 'Draw something to paint.';
+    else if (tooWide || preview.misfits > 0) blocked = 'Every pixel has to fit on the graph first.';
+    else if (repoError) blocked = 'Fix the repo name first.';
+
+    const request: PaintRequest | null =
+        blocked || preview.plan.length === 0
+            ? null
+            : {
+                  text: draft.text.trim() || undefined,
+                  pattern: placed,
+                  placement: { mode, ...(year ? { year } : {}), offset },
+                  shade: draft.shade,
+                  perCell: preview.calibration.perCell,
+                  plan: preview.plan,
+                  repoName,
+                  isPrivate: draft.isPrivate,
+              };
 
     function findBest() {
         const best = bestOffset(calendar, placed, mode, today);
@@ -60,7 +98,7 @@ export function DesignPanel({ calendar, year }: Props) {
             setBestNote('No spot on this graph fits the whole painting.');
             return;
         }
-        setUserOffset(best.offset);
+        update({ offset: best.offset });
         setBestNote(
             best.conflicts === 0
                 ? 'Moved to a spot with no overlapping commits.'
@@ -68,9 +106,16 @@ export function DesignPanel({ calendar, year }: Props) {
         );
     }
 
-    function selectSource(tab: 'text' | 'draw') {
-        if (tab === 'draw' && !drawn) setDrawn(editorStart(text));
-        setSource(tab);
+    function painted(result: PaintResult) {
+        clearDraft();
+        setDone(result);
+    }
+
+    function paintAnother() {
+        setDone(null);
+        setDraft(fresh(calendar.login, year));
+        setBestNote(null);
+        setServerRepoError(null);
     }
 
     return (
@@ -79,76 +124,130 @@ export function DesignPanel({ calendar, year }: Props) {
                 <Graph
                     calendar={calendar}
                     focusWeek={width > 0 ? offset + Math.floor(width / 2) : undefined}
-                    overlay={(w, d) => preview.overlay.get(cellKey(w, d))}
+                    overlay={(w, d) => {
+                        const cell = preview.overlay.get(cellKey(w, d));
+                        // Once painted, show just the painting: the warnings no longer apply.
+                        return done && cell ? (cell.level === undefined ? undefined : { level: cell.level }) : cell;
+                    }}
                 />
             </div>
 
-            <div className="flex flex-col gap-6">
-                <section className="flex flex-col gap-3">
-                    <div role="tablist" aria-label="Design with" className="flex">
-                        {(['text', 'draw'] as const).map((tab, i) => (
-                            <button
-                                key={tab}
-                                type="button"
-                                role="tab"
-                                aria-selected={source === tab}
-                                onClick={() => selectSource(tab)}
-                                className={`border border-neutral-300 px-4 py-1.5 text-sm dark:border-neutral-700 ${
-                                    i === 0 ? 'rounded-l-md' : '-ml-px rounded-r-md'
-                                } ${
-                                    source === tab
-                                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                                        : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                }`}
-                            >
-                                {tab === 'text' ? 'Text' : 'Draw'}
-                            </button>
-                        ))}
-                    </div>
-                    {source === 'text' ? (
+            {done ? (
+                <PaintDone result={done} onPaintAnother={paintAnother} />
+            ) : (
+                <div className="flex flex-col gap-6">
+                    <section className="flex flex-col gap-3">
+                        <div role="tablist" aria-label="Design with" className="flex">
+                            {(['text', 'draw'] as const).map((tab, i) => (
+                                <button
+                                    key={tab}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={draft.source === tab}
+                                    onClick={() =>
+                                        update(
+                                            tab === 'draw' && !draft.drawn
+                                                ? { source: tab, drawn: editorStart(draft.text) }
+                                                : { source: tab },
+                                        )
+                                    }
+                                    className={`border border-neutral-300 px-4 py-1.5 text-sm dark:border-neutral-700 ${
+                                        i === 0 ? 'rounded-l-md' : '-ml-px rounded-r-md'
+                                    } ${
+                                        draft.source === tab
+                                            ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                                            : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                    }`}
+                                >
+                                    {tab === 'text' ? 'Text' : 'Draw'}
+                                </button>
+                            ))}
+                        </div>
+                        {draft.source === 'text' ? (
+                            <div className="flex flex-col gap-1">
+                                <label htmlFor="paint-text" className="text-sm font-medium">
+                                    Text
+                                </label>
+                                <input
+                                    id="paint-text"
+                                    value={draft.text}
+                                    maxLength={MAX_TEXT}
+                                    onChange={(e) => update({ text: e.target.value })}
+                                    placeholder="HIRE ME"
+                                    autoComplete="off"
+                                    className={inputClass}
+                                />
+                                <p className="text-sm text-neutral-500">
+                                    Letters, numbers and a little punctuation. Switch to Draw to touch it up by hand.
+                                </p>
+                            </div>
+                        ) : (
+                            <PixelEditor pattern={draft.drawn ?? emptyPattern(BLANK_WIDTH)} onChange={(drawn) => update({ drawn })} />
+                        )}
+                    </section>
+
+                    {width > 0 && (
+                        <PlacementControls
+                            calendar={calendar}
+                            offset={offset}
+                            maxOffset={maxOffset}
+                            onOffsetChange={(o) => {
+                                setBestNote(null);
+                                update({ offset: o });
+                            }}
+                            onFindBest={findBest}
+                            bestNote={bestNote}
+                            rolling={mode === 'rolling'}
+                            misfits={preview.misfits}
+                            conflictDays={preview.conflicts.length}
+                            conflictCommits={preview.conflictCommits}
+                            tooWide={tooWide}
+                        />
+                    )}
+
+                    <ShadePicker
+                        shade={draft.shade}
+                        onChange={(shade: Shade) => update({ shade })}
+                        calibration={width > 0 && !tooWide ? preview.calibration : null}
+                    />
+
+                    <section className="flex flex-col gap-3">
                         <div className="flex flex-col gap-1">
-                            <label htmlFor="paint-text" className="text-sm font-medium">
-                                Text
+                            <label htmlFor="repo-name" className="text-sm font-medium">
+                                Repo name
                             </label>
                             <input
-                                id="paint-text"
-                                value={text}
-                                maxLength={MAX_TEXT}
-                                onChange={(e) => setText(e.target.value)}
-                                placeholder="HIRE ME"
+                                id="repo-name"
+                                value={repoName}
+                                maxLength={100}
+                                onChange={(e) => {
+                                    setServerRepoError(null);
+                                    update({ repoName: e.target.value });
+                                }}
                                 autoComplete="off"
-                                className={inputClass}
+                                autoCapitalize="off"
+                                spellCheck={false}
+                                aria-invalid={repoError ? true : undefined}
+                                aria-describedby="repo-name-help"
+                                className={`${inputClass} font-mono sm:max-w-sm`}
                             />
-                            <p className="text-sm text-neutral-500">
-                                Letters, numbers and a little punctuation. Switch to Draw to touch it up by hand.
+                            <p id="repo-name-help" className={`text-sm ${repoError ? 'text-red-600 dark:text-red-400' : 'text-neutral-500'}`}>
+                                {repoError ?? 'A new repo is created for this painting. Delete it any time to undo.'}
                             </p>
                         </div>
-                    ) : (
-                        <PixelEditor pattern={drawn ?? emptyPattern(BLANK_WIDTH)} onChange={setDrawn} />
-                    )}
-                </section>
+                    </section>
 
-                {width > 0 && (
-                    <PlacementControls
-                        calendar={calendar}
-                        offset={offset}
-                        maxOffset={maxOffset}
-                        onOffsetChange={(o) => {
-                            setBestNote(null);
-                            setUserOffset(o);
-                        }}
-                        onFindBest={findBest}
-                        bestNote={bestNote}
-                        rolling={mode === 'rolling'}
-                        misfits={preview.misfits}
-                        conflictDays={preview.conflicts.length}
-                        conflictCommits={preview.conflictCommits}
-                        tooWide={tooWide}
+                    <PaintAction
+                        graphLogin={calendar.login}
+                        request={request}
+                        blocked={blocked}
+                        totalCommits={preview.calibration.totalCommits}
+                        onPainted={painted}
+                        onShowMine={onShowMine}
+                        onRepoNameError={setServerRepoError}
                     />
-                )}
-
-                <ShadePicker shade={shade} onChange={setShade} calibration={width > 0 && !tooWide ? preview.calibration : null} />
-            </div>
+                </div>
+            )}
         </div>
     );
 }
