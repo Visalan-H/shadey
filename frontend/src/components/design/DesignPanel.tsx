@@ -29,7 +29,9 @@ interface Props {
     onShowMine: (login: string) => void;
 }
 
-const MAX_TEXT = 30;
+// Letters are 5 columns plus a gap and the graph is 53 wide, so only about 8 fit.
+// A little slack lets people type and then see the "too wide" warning.
+const MAX_TEXT = 12;
 const BLANK_WIDTH = 20;
 
 // Text gets a blank column either side in the editor, so it can be touched up at the edges.
@@ -186,7 +188,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                                     className={inputClass}
                                 />
                                 <p className="text-sm text-neutral-500">
-                                    Letters, numbers and a little punctuation. Switch to Draw to touch it up by hand.
+                                    About 8 letters fit on the graph. Switch to Draw to touch it up by hand.
                                 </p>
                             </div>
                         ) : (

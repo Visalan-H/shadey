@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { textToPattern } from './pattern';
 import { buildPreview, cellKey, todayUtc } from './preview';
 import { makeCalendar } from './testCalendar';
-
-const I = textToPattern('I'); // 3 columns, rows 1-5
+import { I } from './testPatterns';
 
 describe('buildPreview', () => {
     it('places every lit pixel and plans one commit day per pixel', () => {

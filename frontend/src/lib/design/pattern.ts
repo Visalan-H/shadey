@@ -2,7 +2,7 @@ import type { Pattern } from '../types';
 import { GLYPH_HEIGHT, renderText } from './pixelFont';
 
 export const DAYS = 7;
-// Glyphs sit in rows 1..5, leaving Sunday and Saturday as a margin.
+// Centres the glyphs vertically; the current font fills all 7 rows, so this is 0.
 const TEXT_TOP = Math.floor((DAYS - GLYPH_HEIGHT) / 2);
 
 export function patternWidth(pattern: Pattern): number {
