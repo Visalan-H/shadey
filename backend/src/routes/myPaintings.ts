@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { connectDb } from '../db.js';
 import { requireUser } from '../middleware/requireUser.js';
 import { PaintingModel, type Painting } from '../models/Painting.js';
+import { forgetCalendars } from '../services/calendar.js';
 
 export const router = Router();
 
@@ -50,6 +51,7 @@ router.post('/:shareId/deleted', requireUser, async (req, res) => {
         }
         painting.status = 'deleted';
         await painting.save();
+        await forgetCalendars(painting.login).catch((e: unknown) => console.error('Clearing cached graphs failed', e));
     }
     res.json({ painting: toSummary(painting) });
 });

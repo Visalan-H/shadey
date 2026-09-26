@@ -37,6 +37,10 @@ export function useMarkDeleted() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (shareId: string) => api<{ painting: PaintingSummary }>(`/api/me/paintings/${encodeURIComponent(shareId)}/deleted`, { method: 'POST' }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: myPaintingsKey }),
+        onSuccess: () =>
+            Promise.all([
+                queryClient.invalidateQueries({ queryKey: myPaintingsKey }),
+                queryClient.invalidateQueries({ queryKey: ['calendar'] }),
+            ]),
     });
 }

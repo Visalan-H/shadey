@@ -5,6 +5,7 @@ import { connectDb } from '../db.js';
 import { env } from '../env.js';
 import { loadSessionUser, requireUser } from '../middleware/requireUser.js';
 import { PaintingModel } from '../models/Painting.js';
+import { forgetCalendars } from '../services/calendar.js';
 import { fetchProfile } from '../services/githubOAuth.js';
 import { deleteRepo } from '../services/paint/github.js';
 import { cookieOptions, signToken, verifyToken } from '../services/session.js';
@@ -120,6 +121,7 @@ router.get(CALLBACK_PATH, async (req, res) => {
 
         painting.status = 'deleted';
         await painting.save();
+        await forgetCalendars(painting.login).catch((e: unknown) => console.error('Clearing cached graphs failed', e));
     } catch (err) {
         // Log only the message: request errors can carry the Authorization header.
         console.error('Deleting a painting repo failed:', (err as Error)?.message);

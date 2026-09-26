@@ -6,6 +6,7 @@ import { connectDb } from '../db.js';
 import { env } from '../env.js';
 import { getUserToken, requireUser } from '../middleware/requireUser.js';
 import { PaintingModel } from '../models/Painting.js';
+import { forgetCalendars } from '../services/calendar.js';
 import { checkText } from '../services/moderation.js';
 import {
     InvalidRepoNameError,
@@ -196,6 +197,7 @@ export function createPaintingsRouter(deps: PaintingsDeps = {}) {
             return;
         }
 
+        await forgetCalendars(user.login).catch((e: unknown) => console.error('Clearing cached graphs failed', e));
         res.status(201).json({
             shareId,
             repoUrl: result.repo.htmlUrl,

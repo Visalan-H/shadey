@@ -56,6 +56,7 @@ export function PaintAction({ graphLogin, request, blocked, totalCommits, onPain
         paint.mutate(request, {
             onSuccess: (result) => {
                 void queryClient.invalidateQueries({ queryKey: ['my-paintings'] });
+                void queryClient.invalidateQueries({ queryKey: ['calendar'] });
                 onPainted(result);
             },
             onError: (err) => {

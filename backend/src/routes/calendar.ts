@@ -31,11 +31,13 @@ router.get('/:login', async (req, res) => {
 
     await connectDb();
     const user = await loadSessionUser(req);
-    const viewer = user ? { githubId: user.githubId, token: getUserToken(user) } : undefined;
+    const viewer = user ? { githubId: user.githubId, login: user.login, token: getUserToken(user) } : undefined;
+    const ownGraph = user?.login.toLowerCase() === parsedLogin.data.toLowerCase();
     try {
         const calendar = await getCalendar(parsedLogin.data, parsedQuery.data.year, viewer);
-        // A signed-in viewer's graph can include what only they may see.
-        res.set('Cache-Control', viewer ? 'private, max-age=300' : 'public, max-age=300');
+        // A signed-in viewer's graph can include what only they may see. Your own graph changes
+        // under you when you paint or delete, so the browser always asks again.
+        res.set('Cache-Control', ownGraph ? 'private, no-cache' : viewer ? 'private, max-age=300' : 'public, max-age=300');
         res.json(calendar);
     } catch (err) {
         if (err instanceof UserNotFoundError) {
