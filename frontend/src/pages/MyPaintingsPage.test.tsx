@@ -26,11 +26,12 @@ function json(body: unknown, status = 200) {
     return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-function mockApi({ user = me as typeof me | null, paintings = [painting()], markStatus = 200 } = {}) {
+function mockApi({ user = me as typeof me | null, paintings = [painting()], markStatus = 200, shadeCheck = {} as unknown } = {}) {
     let list = paintings;
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
         if (url === '/api/auth/me') return json({ user });
         if (url === '/api/me/paintings') return json({ paintings: list });
+        if (url.endsWith('/check-shades') && init?.method === 'POST') return json(shadeCheck);
         if (url.endsWith('/deleted') && init?.method === 'POST') {
             if (markStatus !== 200) return json({ error: 'The repo still exists on GitHub' }, markStatus);
             list = list.map((p) => ({ ...p, status: 'deleted' as const }));
@@ -101,6 +102,21 @@ describe('MyPaintingsPage', () => {
         cleanup();
         renderAt('/me?delete_error=abc');
         expect(await screen.findByRole('alert')).toHaveTextContent("The repo wasn't deleted.");
+    });
+
+    it('checks shades and reports a top-up', async () => {
+        const fetch = mockApi({ shadeCheck: { result: 'toppedUp', lightDays: 3, added: 24, capped: false } });
+        renderAt();
+        await userEvent.click(await screen.findByRole('button', { name: 'Check shades' }));
+        expect(await screen.findByRole('status')).toHaveTextContent('3 days came out lighter than you picked, so we added 24 commits.');
+        expect(fetch).toHaveBeenCalledWith('/api/me/paintings/abc/check-shades', expect.objectContaining({ method: 'POST' }));
+    });
+
+    it('asks to wait while GitHub catches up', async () => {
+        mockApi({ shadeCheck: { result: 'pending' } });
+        renderAt();
+        await userEvent.click(await screen.findByRole('button', { name: 'Check shades' }));
+        expect(await screen.findByRole('status')).toHaveTextContent("GitHub hasn't counted all the commits yet.");
     });
 
     it('invites a first painting when the list is empty', async () => {

@@ -15,7 +15,7 @@ export {
     validateRepoName,
 } from './github.js';
 export type { PaintRepo } from './github.js';
-export { pushCommits, PushError } from './pushRepo.js';
+export { appendCommits, pushCommits, PushError } from './pushRepo.js';
 export type { PushResult } from './pushRepo.js';
 export { paintReadme } from './readme.js';
 

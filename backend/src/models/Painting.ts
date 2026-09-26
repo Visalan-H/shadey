@@ -34,6 +34,8 @@ export interface Painting {
     perCell: number;
     totalCommits: number;
     cells: PaintedCell[];
+    // Times extra commits were pushed because GitHub showed some days too light.
+    topUps: number;
     status: PaintingStatus;
     createdAt: Date;
     updatedAt: Date;
@@ -88,6 +90,7 @@ const paintingSchema = new Schema<Painting>(
         perCell: { type: Number, required: true, min: 1, max: 500 },
         totalCommits: { type: Number, required: true, min: 1 },
         cells: { type: [cellSchema], required: true },
+        topUps: { type: Number, default: 0, min: 0 },
         status: { type: String, enum: ['painted', 'deleted'], default: 'painted', required: true },
     },
     { timestamps: true },

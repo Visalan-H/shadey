@@ -49,8 +49,9 @@ function parseDate(date: unknown): number | null {
     return ms / 1000;
 }
 
-export function buildCommits(input: { plan: PlanDay[]; author: CommitAuthor }): CommitSpec[] {
-    const { plan, author } = input;
+// startSecond shifts every commit later in its day, so a top-up doesn't reuse the first paint's timestamps.
+export function buildCommits(input: { plan: PlanDay[]; author: CommitAuthor; startSecond?: number }): CommitSpec[] {
+    const { plan, author, startSecond = 0 } = input;
     if (!author.name || !author.email) throw new PlanError('invalid_author', 'Author name and email are required');
     if (plan.length === 0) throw new PlanError('empty_plan', 'Nothing to paint');
 
@@ -68,7 +69,7 @@ export function buildCommits(input: { plan: PlanDay[]; author: CommitAuthor }): 
         total += count;
         if (total > MAX_TOTAL) throw new PlanError('too_many_commits', `At most ${MAX_TOTAL} commits per painting`);
         // With a +0000 offset GitHub buckets the commit by its UTC date; noon keeps it well clear of either edge.
-        days.push({ start: midnight + 12 * 3600, count });
+        days.push({ start: midnight + 12 * 3600 + startSecond, count });
     }
 
     // Oldest first so the parent chain runs forward in time.

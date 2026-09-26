@@ -3,7 +3,15 @@ import { Link, useSearchParams } from 'react-router';
 import { sharePath } from '../components/design/PaintDone';
 import { ApiError } from '../lib/api';
 import { signInUrl, useMe } from '../lib/auth';
-import { deleteForMeUrl, repoSettingsUrl, useMarkDeleted, useMyPaintings, type PaintingSummary } from '../lib/myPaintings';
+import {
+    deleteForMeUrl,
+    repoSettingsUrl,
+    useCheckShades,
+    useMarkDeleted,
+    useMyPaintings,
+    type PaintingSummary,
+    type ShadeCheck,
+} from '../lib/myPaintings';
 
 const buttonClass =
     'inline-flex items-center rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800';
@@ -69,9 +77,36 @@ export function MyPaintingsPage() {
     );
 }
 
+function days(n: number) {
+    return `${n} day${n === 1 ? '' : 's'}`;
+}
+
+function shadeCheckMessage(check: ShadeCheck): string {
+    switch (check.result) {
+        case 'pending':
+            return "GitHub hasn't counted all the commits yet. Try again in a few minutes.";
+        case 'ok':
+            return 'Every day shows the shade you picked.';
+        case 'limit':
+            return `${days(check.lightDays)} still look lighter than you picked, but this painting has used all its top-ups.`;
+        case 'toppedUp':
+            return (
+                `${days(check.lightDays)} came out lighter than you picked, so we added ${check.added.toLocaleString()} commits. ` +
+                (check.capped ? 'They may still look a little light. ' : '') +
+                'GitHub takes a few minutes to show them.'
+            );
+    }
+}
+
 function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
     const [selfDelete, setSelfDelete] = useState(false);
     const markDeleted = useMarkDeleted();
+    const checkShades = useCheckShades();
+    const shadeMessage = checkShades.error
+        ? checkShades.error instanceof ApiError && checkShades.error.status === 502
+            ? checkShades.error.message
+            : "Couldn't check the shades. Try again in a moment."
+        : checkShades.data && shadeCheckMessage(checkShades.data);
     const created = new Date(p.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     const title = p.text?.trim() || p.repoName;
 
@@ -104,6 +139,9 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
                         <Link to={sharePath(p.shareId)} className={buttonClass}>
                             Share page
                         </Link>
+                        <button type="button" onClick={() => checkShades.mutate(p.shareId)} disabled={checkShades.isPending} className={buttonClass}>
+                            {checkShades.isPending ? 'Checking…' : 'Check shades'}
+                        </button>
                         <a href={deleteForMeUrl(p.shareId)} className={buttonClass}>
                             Delete for me
                         </a>
@@ -111,6 +149,11 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
                             Delete it myself
                         </button>
                     </div>
+                    {shadeMessage && (
+                        <p role="status" className="text-sm">
+                            {shadeMessage}
+                        </p>
+                    )}
                     <p className="text-xs text-neutral-500">
                         "Delete for me" asks GitHub for permission to delete repos once. We use it for this repo and throw it away.
                     </p>

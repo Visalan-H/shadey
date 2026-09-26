@@ -71,3 +71,52 @@ export async function pushCommits(opts: {
     }
     return { headOid, commitCount: commits.length, pushMs: Date.now() - started };
 }
+
+// Adds commits on top of an existing branch: fetches only its tip, reuses its tree, and
+// pushes a fast-forward. Used to top up a painting whose shades came out too light.
+// Without a branch it follows the remote's default branch.
+export async function appendCommits(opts: { url: string; token?: string; commits: CommitSpec[]; branch?: string }): Promise<PushResult> {
+    const { url, token, commits } = opts;
+    if (commits.length === 0) throw new PushError('No commits to push');
+
+    const started = Date.now();
+    const fs = createFsFromVolume(new Volume());
+    const dir = '/repo';
+    const onAuth = token ? () => ({ username: 'x-access-token', password: token }) : undefined;
+    await git.init({ fs, dir });
+    await git.addRemote({ fs, dir, remote: 'origin', url });
+
+    let tip: string;
+    let branch: string;
+    try {
+        const fetched = await git.fetch({ fs, http, dir, remote: 'origin', ref: opts.branch, singleBranch: true, depth: 1, tags: false, onAuth });
+        branch = opts.branch ?? fetched.defaultBranch?.replace(/^refs\/heads\//, '') ?? '';
+        if (!fetched.fetchHead || !branch) throw new Error('Branch not found');
+        tip = fetched.fetchHead;
+    } catch (err) {
+        throw new PushError(`Fetch failed: ${(err as Error).message}`, { cause: err });
+    }
+    const { tree } = (await git.readCommit({ fs, dir, oid: tip })).commit;
+
+    let head = tip;
+    for (const c of commits) {
+        head = await git.writeCommit({
+            fs,
+            dir,
+            commit: { message: `${c.message}\n`, tree, parent: [head], author: c.author, committer: c.author },
+        });
+    }
+    await git.writeRef({ fs, dir, ref: `refs/heads/${branch}`, value: head, force: true });
+
+    let result;
+    try {
+        result = await git.push({ fs, http, dir, url, ref: branch, remoteRef: branch, onAuth });
+    } catch (err) {
+        throw new PushError(`Push failed: ${(err as Error).message}`, { cause: err });
+    }
+    const refResult = result.refs[`refs/heads/${branch}`];
+    if (!result.ok || (refResult && !refResult.ok)) {
+        throw new PushError(`Push rejected: ${result.error ?? refResult?.error ?? 'unknown error'}`);
+    }
+    return { headOid: head, commitCount: commits.length, pushMs: Date.now() - started };
+}
