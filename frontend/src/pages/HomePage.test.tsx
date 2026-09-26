@@ -24,7 +24,9 @@ const calendar: Calendar = {
 };
 
 function mockFetch(status: number, body: unknown) {
-    const fetch = vi.fn(async () => new Response(JSON.stringify(body), { status }));
+    const fetch = vi.fn(async (url: string) =>
+        url === '/api/auth/me' ? new Response(JSON.stringify({ user: null })) : new Response(JSON.stringify(body), { status }),
+    );
     vi.stubGlobal('fetch', fetch);
     return fetch;
 }
@@ -78,7 +80,7 @@ describe('HomePage', () => {
         await screen.findByText(/in the last year/);
         await userEvent.selectOptions(screen.getByLabelText('Year'), '2020');
         expect(await screen.findByText(/in 2020/)).toBeInTheDocument();
-        expect(fetch).toHaveBeenLastCalledWith('/api/calendar/octocat?year=2020', expect.anything());
+        expect(fetch).toHaveBeenCalledWith('/api/calendar/octocat?year=2020', expect.anything());
         expect(screen.getByTestId('location')).toHaveTextContent('?u=octocat&y=2020');
     });
 

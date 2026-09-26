@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { Calendar, CalendarDay, Level } from '../lib/types';
 
 export interface GraphOverlayCell {
@@ -10,6 +11,8 @@ export type GraphOverlay = (week: number, weekday: number, day: CalendarDay | nu
 export interface GraphProps {
     calendar: Calendar;
     overlay?: GraphOverlay;
+    // Week column to keep in view when the graph is wider than the screen (phones).
+    focusWeek?: number;
 }
 
 // GitHub's own palette, light and dark.
@@ -54,7 +57,17 @@ function monthLabels(weeks: Calendar['weeks']) {
     return labels;
 }
 
-export function Graph({ calendar, overlay }: GraphProps) {
+export function Graph({ calendar, overlay, focusWeek }: GraphProps) {
+    const scroller = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = scroller.current;
+        if (!el || focusWeek === undefined || el.scrollWidth <= el.clientWidth) return;
+        // Roughly: day labels take ~28px, then one CELL + GAP per week.
+        const x = 28 + focusWeek * (CELL + GAP);
+        el.scrollLeft = Math.max(0, x - el.clientWidth / 2);
+    }, [focusWeek]);
+
     const cells = calendar.weeks.map((week, w) =>
         Array.from({ length: 7 }, (_, d) => {
             const day = week[d] ?? null;
@@ -65,7 +78,7 @@ export function Graph({ calendar, overlay }: GraphProps) {
     const dimReal = cells.some((week) => week.some((c) => c.over?.level !== undefined));
 
     return (
-        <div className="max-w-full overflow-x-auto p-1">
+        <div ref={scroller} className="max-w-full overflow-x-auto p-1">
             <div
                 className="inline-grid text-[10px] leading-none text-neutral-500 dark:text-neutral-400"
                 style={{
