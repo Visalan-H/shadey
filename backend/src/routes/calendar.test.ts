@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import request from 'supertest';
+import { randomBytes } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTestDb } from '../test/mongo.js';
 
@@ -10,7 +11,7 @@ Object.assign(process.env, {
     GITHUB_CLIENT_ID: 'id',
     GITHUB_CLIENT_SECRET: 'secret',
     SESSION_SECRET: 'x'.repeat(32),
-    TOKEN_ENCRYPTION_KEY: 'key',
+    TOKEN_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
     APP_URL: 'http://localhost:5173',
 });
 
@@ -19,6 +20,9 @@ vi.mock('../db.js', () => ({ connectDb: async () => undefined }));
 
 const { createApp } = await import('../app.js');
 const { CalendarCache } = await import('../models/CalendarCache.js');
+const { User } = await import('../models/User.js');
+const { encrypt } = await import('../services/crypto.js');
+const { createSession } = await import('../services/session.js');
 
 const GQL = 'https://api.github.com/graphql';
 
@@ -39,7 +43,7 @@ const weeks = [
     { contributionDays: [day('2025-01-05', 0, 9, 'FOURTH_QUARTILE'), day('2025-01-06', 1, 0, 'NONE')] },
 ];
 
-let calls: { query: string; variables: Record<string, unknown> }[] = [];
+let calls: { query: string; variables: Record<string, unknown>; auth: string | null }[] = [];
 
 const server = setupServer();
 useTestDb();
@@ -61,7 +65,8 @@ afterEach(() => server.resetHandlers());
 function respondWith(body: Record<string, unknown>, status = 200) {
     server.use(
         http.post(GQL, async ({ request: req }) => {
-            calls.push((await req.json()) as (typeof calls)[number]);
+            const sent = (await req.json()) as Omit<(typeof calls)[number], 'auth'>;
+            calls.push({ ...sent, auth: req.headers.get('authorization') });
             return HttpResponse.json(body, { status });
         }),
     );
@@ -170,5 +175,54 @@ describe('GET /api/calendar/:login', () => {
         const res = await request(createApp()).get('/api/calendar/octocat');
         expect(res.status).toBe(502);
         expect(res.body.error).toBe('Could not load the contribution graph from GitHub');
+    });
+});
+
+describe('GET /api/calendar/:login when signed in', () => {
+    async function signIn() {
+        await User.deleteMany({});
+        const user = await User.create({ githubId: 42, login: 'octocat', name: null, avatarUrl: '', tokenEnc: encrypt('gho_viewer'), scopes: [] });
+        return `gp_session=${await createSession(user.id)}`;
+    }
+
+    it("reads with the viewer's token and keeps the result to them", async () => {
+        respondWith(ok);
+        const app = createApp();
+        const cookie = await signIn();
+
+        const mine = await request(app).get('/api/calendar/octocat').set('Cookie', cookie);
+        expect(mine.status).toBe(200);
+        expect(mine.headers['cache-control']).toBe('private, max-age=300');
+        expect(calls[0]?.auth).toBe('token gho_viewer');
+
+        // Their repeat request comes from their own cache entry.
+        await request(app).get('/api/calendar/octocat').set('Cookie', cookie);
+        expect(calls).toHaveLength(1);
+
+        // A signed-out visitor never gets the viewer's copy.
+        const theirs = await request(app).get('/api/calendar/octocat');
+        expect(theirs.headers['cache-control']).toBe('public, max-age=300');
+        expect(calls).toHaveLength(2);
+        expect(calls[1]?.auth).toBe('token test-token');
+    });
+
+    it("falls back to the server's token when the viewer's is revoked", async () => {
+        let first = true;
+        server.use(
+            http.post(GQL, async ({ request: req }) => {
+                const sent = (await req.json()) as Omit<(typeof calls)[number], 'auth'>;
+                calls.push({ ...sent, auth: req.headers.get('authorization') });
+                if (first) {
+                    first = false;
+                    return HttpResponse.json({ message: 'Bad credentials' }, { status: 401 });
+                }
+                return HttpResponse.json(ok);
+            }),
+        );
+        const res = await request(createApp()).get('/api/calendar/octocat').set('Cookie', await signIn());
+        expect(res.status).toBe(200);
+        expect(calls.map((c) => c.auth)).toEqual(['token gho_viewer', 'token test-token']);
+        // The server-token result is the public graph, so it goes in the shared cache.
+        expect(await CalendarCache.findOne({ key: 'octocat:rolling' })).not.toBeNull();
     });
 });
