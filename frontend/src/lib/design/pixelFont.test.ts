@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { GLYPH_HEIGHT, GLYPHS, glyphFor, renderText } from './pixelFont';
 
 describe('pixel font', () => {
-    it('has every glyph at 5 rows by at most 3 columns, rows of equal width', () => {
+    it('has every glyph at 7 rows by at most 9 columns, rows of equal width', () => {
         for (const [ch, glyph] of Object.entries(GLYPHS)) {
             expect(glyph, ch).toHaveLength(GLYPH_HEIGHT);
             const width = glyph[0]!.length;
             expect(width, ch).toBeGreaterThanOrEqual(1);
-            expect(width, ch).toBeLessThanOrEqual(3);
+            expect(width, ch).toBeLessThanOrEqual(9);
             for (const row of glyph) {
                 expect(row, ch).toMatch(/^[01]+$/);
                 expect(row.length, ch).toBe(width);
@@ -36,21 +36,21 @@ describe('pixel font', () => {
     });
 
     it('separates glyphs with one blank column and none at the ends', () => {
-        // H (3) + gap (1) + I (3)
+        // H (5) + gap (1) + I (5)
         const rows = renderText('HI');
-        expect(rows).toHaveLength(5);
-        for (const row of rows) expect(row).toHaveLength(7);
-        expect(rows.every((row) => row[3] === false)).toBe(true);
+        expect(rows).toHaveLength(7);
+        for (const row of rows) expect(row).toHaveLength(11);
+        expect(rows.every((row) => row[5] === false)).toBe(true);
     });
 
-    it('gives a word break three blank columns', () => {
-        // A (3) + gap + space (1) + gap + B (3)
+    it('gives a word break four blank columns', () => {
+        // A (5) + gap + space (2) + gap + B (5)
         const rows = renderText('A B');
-        expect(rows[0]).toHaveLength(9);
-        for (const col of [3, 4, 5]) expect(rows.every((row) => row[col] === false)).toBe(true);
+        expect(rows[0]).toHaveLength(14);
+        for (const col of [5, 6, 7, 8]) expect(rows.every((row) => row[col] === false)).toBe(true);
     });
 
-    it('returns 5 empty rows for empty text', () => {
-        expect(renderText('')).toEqual([[], [], [], [], []]);
+    it('returns 7 empty rows for empty text', () => {
+        expect(renderText('')).toEqual([[], [], [], [], [], [], []]);
     });
 });

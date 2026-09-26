@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Calendar } from '../types';
-import { textToPattern } from './pattern';
 import { cellsFor } from './placement';
 import { calibrate, commitPlan, levelFor, levelsFor, quartileThresholds } from './shade';
 import { makeCalendar } from './testCalendar';
+import { bar, HI, I } from './testPatterns';
 
 const FROM = '2025-09-28';
 const TO = '2026-09-26';
@@ -64,7 +64,7 @@ describe('calibrate', () => {
     const busy = makeCalendar(FROM, TO, (_date, week, weekday) => ((week * 7 + weekday) % 10) + 1);
 
     it('reaches level 4 with a small count on a quiet calendar', () => {
-        const cells = cellsFor(quiet, textToPattern('HI'), 2, TO);
+        const cells = cellsFor(quiet, HI, 2, TO);
         const result = calibrate(quiet, cells, 4);
         expect(result.perCell).toBeLessThanOrEqual(2);
         expect(result.achieved).toHaveLength(20);
@@ -76,8 +76,8 @@ describe('calibrate', () => {
     });
 
     it('needs a larger count on a busy calendar and warns about shifted days', () => {
-        const cells = cellsFor(busy, textToPattern('HI'), 20, TO);
-        const quietResult = calibrate(quiet, cellsFor(quiet, textToPattern('HI'), 2, TO), 4);
+        const cells = cellsFor(busy, HI, 20, TO);
+        const quietResult = calibrate(quiet, cellsFor(quiet, HI, 2, TO), 4);
         const result = calibrate(busy, cells, 4);
         expect(result.perCell).toBeGreaterThan(quietResult.perCell);
         expect(result.achieved.every((level) => level === 4)).toBe(true);
@@ -94,7 +94,7 @@ describe('calibrate', () => {
 
     it('flags when the cap is not enough', () => {
         const heavy = makeCalendar(FROM, TO, (_date, week) => (week < 40 ? 500 : 0));
-        const cells = cellsFor(heavy, textToPattern('HI'), 42, TO);
+        const cells = cellsFor(heavy, HI, 42, TO);
         const result = calibrate(heavy, cells, 4, 20);
         expect(result.capped).toBe(true);
         expect(result.exact).toBe(false);
@@ -105,7 +105,7 @@ describe('calibrate', () => {
     it('hits a middle level exactly when the distribution allows it', () => {
         // real days cycle 1..8; paint over an empty stretch
         const calendar = makeCalendar(FROM, TO, (_date, week, weekday) => (week < 10 ? 0 : ((week * 7 + weekday) % 8) + 1));
-        const cells = cellsFor(calendar, textToPattern('HI'), 1, TO);
+        const cells = cellsFor(calendar, HI, 1, TO);
         for (const target of [1, 2, 3] as const) {
             const result = calibrate(calendar, cells, target);
             expect(result.exact, `level ${target}`).toBe(true);
@@ -118,7 +118,7 @@ describe('calibrate', () => {
     it('reports the closest level when the target is impossible', () => {
         // painting alone on an empty calendar is always uniform, so always darkest
         const empty = makeCalendar(FROM, TO);
-        const result = calibrate(empty, cellsFor(empty, textToPattern('HI'), 2, TO), 1);
+        const result = calibrate(empty, cellsFor(empty, HI, 2, TO), 1);
         expect(result.exact).toBe(false);
         expect(result.capped).toBe(false);
         expect(result.perCell).toBe(1);
@@ -127,13 +127,13 @@ describe('calibrate', () => {
 
     it('ignores cells that cannot be painted and handles nothing to paint', () => {
         const calendar = makeCalendar('2026-01-01', '2026-12-31');
-        const cells = cellsFor(calendar, textToPattern('I'), calendar.weeks.length - 5, '2026-09-25');
+        const cells = cellsFor(calendar, I, calendar.weeks.length - 5, '2026-09-25');
         const result = calibrate(calendar, cells, 4);
         expect(result).toMatchObject({ perCell: 0, totalCommits: 0, achieved: [], dates: [], capped: false });
     });
 
     it('is fast enough to run on every edit', () => {
-        const cells = cellsFor(busy, textToPattern('HIRE ME'), 10, TO);
+        const cells = cellsFor(busy, bar(25), 10, TO);
         const start = performance.now();
         calibrate(busy, cells, 4, 100);
         expect(performance.now() - start).toBeLessThan(500);

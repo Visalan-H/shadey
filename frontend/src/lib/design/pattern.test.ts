@@ -3,18 +3,17 @@ import { emptyPattern, litCount, patternWidth, textToPattern, togglePixel, trimP
 import { renderText } from './pixelFont';
 
 describe('textToPattern', () => {
-    it('is 7 rows tall with the glyphs in rows 1..5', () => {
+    it('fills all 7 rows with the glyphs', () => {
         const pattern = textToPattern('HI');
         expect(pattern).toHaveLength(7);
-        expect(pattern[0]!.some(Boolean)).toBe(false);
-        expect(pattern[6]!.some(Boolean)).toBe(false);
-        expect(pattern.slice(1, 6)).toEqual(renderText('HI'));
+        expect(pattern).toEqual(renderText('HI'));
     });
 
     it('is as wide as the glyphs plus one column between each', () => {
-        expect(patternWidth(textToPattern('A'))).toBe(3);
-        expect(patternWidth(textToPattern('HI'))).toBe(7);
-        expect(patternWidth(textToPattern('HIRE ME'))).toBe(4 * 3 + 1 + 2 * 3 + 6);
+        expect(patternWidth(textToPattern('A'))).toBe(5);
+        expect(patternWidth(textToPattern('HI'))).toBe(5 + 1 + 5);
+        // Six 5-wide letters, the 2-wide space and six gaps.
+        expect(patternWidth(textToPattern('HIRE ME'))).toBe(6 * 5 + 2 + 6);
         expect(patternWidth(textToPattern('!'))).toBe(1);
     });
 
@@ -66,7 +65,7 @@ describe('pattern helpers', () => {
 
     it('counts lit pixels', () => {
         expect(litCount(emptyPattern(5))).toBe(0);
-        expect(litCount(textToPattern('I'))).toBe(9);
-        expect(litCount(textToPattern('HI'))).toBe(11 + 9);
+        expect(litCount(textToPattern('I'))).toBe(15);
+        expect(litCount(textToPattern('HI'))).toBe(17 + 15);
     });
 });

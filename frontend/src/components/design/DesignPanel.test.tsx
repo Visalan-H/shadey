@@ -64,9 +64,9 @@ describe('DesignPanel', () => {
         renderPanel();
         expect(paintedCells()).toHaveLength(0);
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
-        // H = 11 pixels, I = 9.
-        expect(paintedCells()).toHaveLength(20);
-        expect(screen.getByTestId('commit-estimate')).toHaveTextContent(/20 commits \(1 per day\)/);
+        // H = 17 pixels, I = 15.
+        expect(paintedCells()).toHaveLength(32);
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent(/32 commits \(1 per day\)/);
         expect(screen.getByLabelText('Repo name')).toHaveValue('paint-hi');
     });
 
@@ -103,7 +103,7 @@ describe('DesignPanel', () => {
             isPrivate: false,
         });
         expect(body.pattern).toHaveLength(7);
-        expect(body.plan).toHaveLength(20);
+        expect(body.plan).toHaveLength(32);
         expect(sessionStorage.getItem('gp:draft')).toBeNull();
     });
 
@@ -175,8 +175,8 @@ describe('DesignPanel', () => {
         await userEvent.click(screen.getByRole('tab', { name: 'Draw' }));
         const editor = screen.getByRole('group', { name: 'Pixel editor' });
         // "I" plus a blank column either side.
-        expect(within(editor).getAllByRole('button', { pressed: true })).toHaveLength(9);
-        expect(within(editor).getAllByRole('button')).toHaveLength(7 * 5);
+        expect(within(editor).getAllByRole('button', { pressed: true })).toHaveLength(15);
+        expect(within(editor).getAllByRole('button')).toHaveLength(7 * 7);
     });
 
     it('updates the graph live while drawing', async () => {
@@ -193,7 +193,7 @@ describe('DesignPanel', () => {
         mockApi();
         renderPanel();
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
-        expect(screen.getByLabelText('Position')).toHaveAttribute('max', String(53 - 7));
+        expect(screen.getByLabelText('Position')).toHaveAttribute('max', String(53 - 11));
     });
 
     it('warns that the last-12-months painting slides off', async () => {
@@ -205,15 +205,15 @@ describe('DesignPanel', () => {
 
     it('calibrates the commit count to the chosen shade', async () => {
         mockApi();
-        // Ten busy weeks at 8 a day: the darkest shade needs as many, the lightest just one.
-        renderPanel(calendar((_d, week) => (week < 10 ? 8 : 0)));
+        // Twenty busy weeks at 8 a day: the darkest shade needs as many, the lightest just one.
+        renderPanel(calendar((_d, week) => (week < 20 ? 8 : 0)));
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
-        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~160 commits (8 per day)');
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~256 commits (8 per day)');
 
         await userEvent.click(screen.getByRole('button', { name: 'Shade 1' }));
         expect(screen.getByRole('button', { name: 'Shade 1' })).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~20 commits (1 per day)');
-        expect(document.querySelectorAll('[data-level="1"]')).toHaveLength(20);
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~32 commits (1 per day)');
+        expect(document.querySelectorAll('[data-level="1"]')).toHaveLength(32);
     });
 
     it('offers share buttons after painting', async () => {
