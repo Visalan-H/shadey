@@ -92,8 +92,13 @@ async function fetchFromGitHub(login: string, year: number | undefined, token: s
 
 export interface Viewer {
     githubId: number;
+    login: string;
     token: string;
 }
+
+// Your own graph changes when you paint or delete, and GitHub takes a minute or two to catch up,
+// so it only stays cached long enough to absorb reloads.
+const OWN_GRAPH_TTL_SECONDS = 2 * 60;
 
 // Signed-in viewers read with their own token, so graph lookups spread over each user's
 // GitHub rate limit instead of all landing on the server's. A user's token can see more
@@ -102,7 +107,8 @@ export interface Viewer {
 export async function getCalendar(login: string, year?: number, viewer?: Viewer): Promise<Calendar> {
     const graph = `${login.toLowerCase()}:${year ?? 'rolling'}`;
     const key = viewer ? `${graph}:viewer:${viewer.githubId}` : graph;
-    const fresh = new Date(Date.now() - CACHE_TTL_SECONDS * 1000);
+    const ownGraph = viewer?.login.toLowerCase() === login.toLowerCase();
+    const fresh = new Date(Date.now() - (ownGraph ? OWN_GRAPH_TTL_SECONDS : CACHE_TTL_SECONDS) * 1000);
     const cached = await CalendarCache.findOne({ key, createdAt: { $gt: fresh } }).lean();
     if (cached) return cached.calendar;
 
@@ -116,4 +122,10 @@ export async function getCalendar(login: string, year?: number, viewer?: Viewer)
     }
     await CalendarCache.updateOne({ key }, { calendar, createdAt: new Date() }, { upsert: true });
     return calendar;
+}
+
+// Drops every cached graph for a login, shared and per viewer, after a paint or delete changes it.
+export async function forgetCalendars(login: string) {
+    const prefix = login.toLowerCase().replace(/[^a-z\d-]/g, '');
+    await CalendarCache.deleteMany({ key: { $regex: `^${prefix}:` } });
 }

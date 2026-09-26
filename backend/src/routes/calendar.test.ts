@@ -23,6 +23,7 @@ const { CalendarCache } = await import('../models/CalendarCache.js');
 const { User } = await import('../models/User.js');
 const { encrypt } = await import('../services/crypto.js');
 const { createSession } = await import('../services/session.js');
+const { forgetCalendars } = await import('../services/calendar.js');
 
 const GQL = 'https://api.github.com/graphql';
 
@@ -179,11 +180,39 @@ describe('GET /api/calendar/:login', () => {
 });
 
 describe('GET /api/calendar/:login when signed in', () => {
-    async function signIn() {
+    async function signIn(login = 'hubber') {
         await User.deleteMany({});
-        const user = await User.create({ githubId: 42, login: 'octocat', name: null, avatarUrl: '', tokenEnc: encrypt('gho_viewer'), scopes: [] });
+        const user = await User.create({ githubId: 42, login, name: null, avatarUrl: '', tokenEnc: encrypt('gho_viewer'), scopes: [] });
         return `gp_session=${await createSession(user.id)}`;
     }
+
+    it('keeps your own graph fresh', async () => {
+        respondWith(ok);
+        const app = createApp();
+        const cookie = await signIn('OctoCat');
+
+        const res = await request(app).get('/api/calendar/octocat').set('Cookie', cookie);
+        expect(res.headers['cache-control']).toBe('private, no-cache');
+        await request(app).get('/api/calendar/octocat').set('Cookie', cookie);
+        expect(calls).toHaveLength(1);
+
+        // Older than two minutes: GitHub is asked again instead of waiting out the hour.
+        await CalendarCache.updateOne({}, { createdAt: new Date(Date.now() - 3 * 60 * 1000) });
+        await request(app).get('/api/calendar/octocat').set('Cookie', cookie);
+        expect(calls).toHaveLength(2);
+    });
+
+    it('forgets every cached copy of a graph after a paint or delete', async () => {
+        respondWith(ok);
+        const app = createApp();
+        await request(app).get('/api/calendar/octocat').set('Cookie', await signIn());
+        await request(app).get('/api/calendar/octocat?year=2023');
+        await request(app).get('/api/calendar/octocat-2');
+        expect(await CalendarCache.countDocuments()).toBe(3);
+
+        await forgetCalendars('OctoCat');
+        expect((await CalendarCache.find().lean()).map((c) => c.key)).toEqual(['octocat-2:rolling']);
+    });
 
     it("reads with the viewer's token and keeps the result to them", async () => {
         respondWith(ok);
