@@ -31,10 +31,14 @@ export function PaintDone({ result, onPaintAnother, children }: Props) {
                 <Link to={sharePath(result.shareId)} className={linkClass}>
                     Open share page
                 </Link>
+                <Link to="/me" className={linkClass}>
+                    My paintings
+                </Link>
             </div>
             {children}
             <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                GitHub can take a few minutes, sometimes up to a day, to show it on your graph. To undo, delete the repo on GitHub.
+                GitHub can take a few minutes, sometimes up to a day, to show it on your graph. To undo, delete the repo from My
+                paintings.
             </p>
             <div>
                 <button

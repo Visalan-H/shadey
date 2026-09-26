@@ -2,6 +2,8 @@ import cookieParser from 'cookie-parser';
 import express, { type ErrorRequestHandler } from 'express';
 import { router as auth } from './routes/auth.js';
 import { router as calendar } from './routes/calendar.js';
+import { router as deleteFlow } from './routes/deleteFlow.js';
+import { router as myPaintings } from './routes/myPaintings.js';
 import { router as paintings } from './routes/paintings.js';
 import { router as share } from './routes/share.js';
 
@@ -15,9 +17,12 @@ export function createApp() {
         res.json({ ok: true });
     });
 
+    // Before /api/auth: owns /api/auth/delete and /api/auth/callback/delete.
+    app.use(deleteFlow);
     app.use('/api/auth', auth);
     app.use('/api/calendar', calendar);
     app.use('/api/paintings', paintings);
+    app.use('/api/me/paintings', myPaintings);
     // Share pages (/p/:id) and share images (/og/:id.png), forwarded here by the frontend.
     app.use(share);
 
