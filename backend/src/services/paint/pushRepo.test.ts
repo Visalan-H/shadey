@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startGitServer, type GitServer } from '../../test/gitServer.js';
 import { buildCommits } from './buildCommits.js';
-import { pushCommits, PushError } from './pushRepo.js';
+import { appendCommits, pushCommits, PushError } from './pushRepo.js';
 
 const author = { name: 'Octo Cat', email: '1+octocat@users.noreply.github.com' };
 const token = 'gho_test_token';
@@ -85,5 +85,31 @@ describe('pushCommits', () => {
         await expect(
             pushCommits({ url: server.repoUrl('missing'), token, commits, readme: 'x' }),
         ).rejects.toBeInstanceOf(PushError);
+    });
+});
+
+describe('appendCommits', () => {
+    it('adds commits on top of the existing history', async () => {
+        await server.createRepo('topup');
+        const first = await pushCommits({
+            url: server.repoUrl('topup'),
+            token,
+            commits: buildCommits({ plan: [{ date: '2025-01-05', count: 2 }], author }),
+            readme: '# Hi\n',
+        });
+        const extra = buildCommits({ plan: [{ date: '2025-01-05', count: 3 }], author, startSecond: 3600 });
+        const result = await appendCommits({ url: server.repoUrl('topup'), token, commits: extra });
+
+        expect(result.commitCount).toBe(3);
+        expect((await server.git('topup', 'rev-list', '--count', 'main')).trim()).toBe('5');
+        expect((await server.git('topup', 'merge-base', '--is-ancestor', first.headOid, 'main')).trim()).toBe('');
+        expect((await server.git('topup', 'log', '-1', '--format=%ad', '--date=iso-strict', 'main')).trim()).toBe('2025-01-05T13:00:02+00:00');
+        expect(await server.git('topup', 'show', 'main:README.md')).toBe('# Hi\n');
+        await server.git('topup', 'fsck', '--strict');
+    });
+
+    it('fails with a PushError when the repo is gone', async () => {
+        const commits = buildCommits({ plan: [{ date: '2025-01-05', count: 1 }], author });
+        await expect(appendCommits({ url: server.repoUrl('gone'), token, commits })).rejects.toBeInstanceOf(PushError);
     });
 });

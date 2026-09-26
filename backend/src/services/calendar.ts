@@ -124,6 +124,11 @@ export async function getCalendar(login: string, year?: number, viewer?: Viewer)
     return calendar;
 }
 
+// Straight from GitHub, skipping the cache: for checking what a painting really looks like now.
+export function fetchCalendarFresh(login: string, year: number | undefined, token: string): Promise<Calendar> {
+    return fetchFromGitHub(login, year, token, false);
+}
+
 // Drops every cached graph for a login, shared and per viewer, after a paint or delete changes it.
 export async function forgetCalendars(login: string) {
     const prefix = login.toLowerCase().replace(/[^a-z\d-]/g, '');

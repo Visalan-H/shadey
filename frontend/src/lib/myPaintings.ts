@@ -32,6 +32,25 @@ export function repoSettingsUrl(repoUrl: string) {
     return `${repoUrl.replace(/\/+$/, '')}/settings`;
 }
 
+export type ShadeCheck =
+    | { result: 'pending' }
+    | { result: 'ok' }
+    | { result: 'limit'; lightDays: number }
+    | { result: 'toppedUp'; lightDays: number; added: number; capped: boolean };
+
+// Compares the painting with what GitHub shows now; the server tops up days that came out light.
+export function useCheckShades() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (shareId: string) => api<ShadeCheck>(`/api/me/paintings/${encodeURIComponent(shareId)}/check-shades`, { method: 'POST' }),
+        onSuccess: (check) => {
+            if (check.result !== 'toppedUp') return;
+            void queryClient.invalidateQueries({ queryKey: myPaintingsKey });
+            void queryClient.invalidateQueries({ queryKey: ['calendar'] });
+        },
+    });
+}
+
 // "Delete it myself": the user says the repo is gone; the server checks before marking it.
 export function useMarkDeleted() {
     const queryClient = useQueryClient();
