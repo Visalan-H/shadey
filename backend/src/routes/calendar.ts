@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { connectDb } from '../db.js';
+import { getUserToken, loadSessionUser } from '../middleware/requireUser.js';
 import { getCalendar, UpstreamError, UserNotFoundError } from '../services/calendar.js';
 
 export const router = Router();
@@ -29,9 +30,12 @@ router.get('/:login', async (req, res) => {
     }
 
     await connectDb();
+    const user = await loadSessionUser(req);
+    const viewer = user ? { githubId: user.githubId, token: getUserToken(user) } : undefined;
     try {
-        const calendar = await getCalendar(parsedLogin.data, parsedQuery.data.year);
-        res.set('Cache-Control', 'public, max-age=300');
+        const calendar = await getCalendar(parsedLogin.data, parsedQuery.data.year, viewer);
+        // A signed-in viewer's graph can include what only they may see.
+        res.set('Cache-Control', viewer ? 'private, max-age=300' : 'public, max-age=300');
         res.json(calendar);
     } catch (err) {
         if (err instanceof UserNotFoundError) {

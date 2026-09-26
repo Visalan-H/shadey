@@ -68,16 +68,20 @@ function isRateLimit(err: unknown) {
     return (e.status === 403 || e.status === 429) && /rate limit/i.test(e.message ?? '');
 }
 
-async function fetchFromGitHub(login: string, year?: number): Promise<Calendar> {
+// A revoked token or a used-up rate limit: worth one more try with the server's token.
+class ViewerTokenError extends Error {}
+
+async function fetchFromGitHub(login: string, year: number | undefined, token: string, isViewer: boolean): Promise<Calendar> {
     // Retries and throttling would hold the request open for minutes on a serverless function.
-    const octokit = new Octokit({ auth: env().GITHUB_TOKEN, retry: { enabled: false }, throttle: { enabled: false } });
+    const octokit = new Octokit({ auth: token, retry: { enabled: false }, throttle: { enabled: false } });
     const vars = year ? { login, from: `${year}-01-01T00:00:00Z`, to: `${year}-12-31T23:59:59Z` } : { login };
     let res: GqlResponse;
     try {
         res = await octokit.graphql<GqlResponse>(QUERY, vars);
     } catch (err) {
-        const e = err as { errors?: { type?: string }[] };
+        const e = err as { errors?: { type?: string }[]; status?: number };
         if (e.errors?.some((x) => x.type === 'NOT_FOUND')) throw new UserNotFoundError();
+        if (isViewer && (e.status === 401 || isRateLimit(err))) throw new ViewerTokenError();
         if (isRateLimit(err)) throw new UpstreamError('GitHub rate limit reached, try again in a few minutes');
         console.error(err);
         throw new UpstreamError('Could not load the contribution graph from GitHub');
@@ -86,13 +90,30 @@ async function fetchFromGitHub(login: string, year?: number): Promise<Calendar> 
     return toCalendar(res.user.login, res.user.contributionsCollection.contributionCalendar.weeks);
 }
 
-export async function getCalendar(login: string, year?: number): Promise<Calendar> {
-    const key = `${login.toLowerCase()}:${year ?? 'rolling'}`;
+export interface Viewer {
+    githubId: number;
+    token: string;
+}
+
+// Signed-in viewers read with their own token, so graph lookups spread over each user's
+// GitHub rate limit instead of all landing on the server's. A user's token can see more
+// than the public (their own private contribution counts), so those results are cached
+// per viewer and never served to anyone else.
+export async function getCalendar(login: string, year?: number, viewer?: Viewer): Promise<Calendar> {
+    const graph = `${login.toLowerCase()}:${year ?? 'rolling'}`;
+    const key = viewer ? `${graph}:viewer:${viewer.githubId}` : graph;
     const fresh = new Date(Date.now() - CACHE_TTL_SECONDS * 1000);
     const cached = await CalendarCache.findOne({ key, createdAt: { $gt: fresh } }).lean();
     if (cached) return cached.calendar;
 
-    const calendar = await fetchFromGitHub(login, year);
+    let calendar: Calendar;
+    try {
+        calendar = await fetchFromGitHub(login, year, viewer?.token ?? env().GITHUB_TOKEN, Boolean(viewer));
+    } catch (err) {
+        if (!(err instanceof ViewerTokenError)) throw err;
+        // The server token only sees the public graph, so its result is safe to share.
+        return getCalendar(login, year);
+    }
     await CalendarCache.updateOne({ key }, { calendar, createdAt: new Date() }, { upsert: true });
     return calendar;
 }
