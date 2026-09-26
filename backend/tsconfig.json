@@ -3,6 +3,10 @@
         "target": "ES2022",
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
+        // Vercel's type check resolves packages without knowing our files are ESM, so it picks
+        // the CommonJS types of dual packages (satori's default export stops being callable).
+        // No effect on tsc, which already resolves the "import" condition.
+        "customConditions": ["import"],
         "lib": ["ES2022"],
         "types": ["node"],
         "strict": true,

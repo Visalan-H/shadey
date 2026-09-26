@@ -215,4 +215,13 @@ describe('DesignPanel', () => {
         expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~20 commits (1 per day)');
         expect(document.querySelectorAll('[data-level="1"]')).toHaveLength(20);
     });
+
+    it('offers share buttons after painting', async () => {
+        mockApi();
+        renderPanel();
+        await userEvent.type(screen.getByLabelText('Text'), 'Hi');
+        await userEvent.click(await screen.findByRole('button', { name: 'Paint' }));
+        expect(await screen.findByRole('link', { name: 'Share on X' })).toHaveAttribute('href', expect.stringContaining('%2Fp%2Fabc123'));
+        expect(screen.getByRole('button', { name: 'Download image' })).toBeInTheDocument();
+    });
 });
