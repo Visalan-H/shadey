@@ -13,6 +13,7 @@ import {
 } from '../../lib/design';
 import { clearDraft, loadDraft, saveDraft, type Draft } from '../../lib/draft';
 import { defaultRepoName, repoNameError, type PaintRequest, type PaintResult } from '../../lib/paint';
+import { signInUrl, useMe } from '../../lib/auth';
 import type { Calendar, Pattern, Shade } from '../../lib/types';
 import { Graph } from '../Graph';
 import { PaintAction } from './PaintAction';
@@ -50,6 +51,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const [bestNote, setBestNote] = useState<string | null>(null);
     const [serverRepoError, setServerRepoError] = useState<string | null>(null);
     const [done, setDone] = useState<PaintResult | null>(null);
+    const { data: me } = useMe();
 
     useEffect(() => {
         if (!done) saveDraft(draft);
@@ -72,11 +74,13 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
 
     const repoName = draft.repoName ?? defaultRepoName(draft.text || (draft.source === 'draw' ? 'pixels' : ''));
     const repoError = repoNameError(repoName) ?? serverRepoError;
+    const hasRepoScope = Boolean(me?.scopes.includes('repo'));
 
     let blocked: string | null = null;
     if (width === 0) blocked = draft.source === 'text' ? 'Type some text to paint.' : 'Draw something to paint.';
     else if (tooWide || preview.misfits > 0) blocked = 'Every pixel has to fit on the graph first.';
     else if (repoError) blocked = 'Fix the repo name first.';
+    else if (draft.isPrivate && !hasRepoScope) blocked = 'Grant the private repo permission first, or turn off "Private repo".';
 
     const request: PaintRequest | null =
         blocked || preview.plan.length === 0
@@ -234,6 +238,34 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                             <p id="repo-name-help" className={`text-sm ${repoError ? 'text-red-600 dark:text-red-400' : 'text-neutral-500'}`}>
                                 {repoError ?? 'A new repo is created for this painting. Delete it any time to undo.'}
                             </p>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="flex items-center gap-2 text-sm font-medium">
+                                <input
+                                    type="checkbox"
+                                    checked={draft.isPrivate}
+                                    onChange={(e) => update({ isPrivate: e.target.checked })}
+                                    className="h-4 w-4 accent-green-700"
+                                />
+                                Private repo
+                            </label>
+                            {draft.isPrivate && (
+                                <div className="flex flex-col gap-1 text-sm text-neutral-600 dark:text-neutral-400">
+                                    <p>
+                                        A private painting only shows on your graph if "Private contributions" is turned on in your GitHub
+                                        profile settings.
+                                    </p>
+                                    {me && !hasRepoScope && (
+                                        <p>
+                                            GitHub needs to give Graph Painter permission to create private repos.{' '}
+                                            <a href={signInUrl(undefined, 'repo')} className="font-medium text-green-800 underline underline-offset-2 dark:text-green-400">
+                                                Grant permission on GitHub
+                                            </a>
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </section>
 
