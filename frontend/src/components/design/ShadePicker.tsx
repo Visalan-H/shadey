@@ -1,12 +1,13 @@
 import type { Calibration } from '../../lib/design';
 import type { Shade } from '../../lib/types';
+import { Row } from './Row';
 
 // GitHub's palette, matching Graph.
 const SWATCHES: Record<Shade, string> = {
-    1: 'bg-[#9be9a8] dark:bg-[#0e4429]',
-    2: 'bg-[#40c463] dark:bg-[#006d32]',
-    3: 'bg-[#30a14e] dark:bg-[#26a641]',
-    4: 'bg-[#216e39] dark:bg-[#39d353]',
+    1: 'bg-lvl-1',
+    2: 'bg-lvl-2',
+    3: 'bg-lvl-3',
+    4: 'bg-lvl-4',
 };
 
 const SHADES: Shade[] = [1, 2, 3, 4];
@@ -20,8 +21,7 @@ interface Props {
 export function ShadePicker({ shade, onChange, calibration }: Props) {
     const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
     return (
-        <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 text-sm font-medium">Shade</legend>
+        <Row label="Shade" legend="Shade">
             <div className="flex items-center gap-2">
                 {SHADES.map((level) => (
                     <button
@@ -30,32 +30,30 @@ export function ShadePicker({ shade, onChange, calibration }: Props) {
                         aria-pressed={shade === level}
                         aria-label={`Shade ${level}`}
                         onClick={() => onChange(level)}
-                        className={`h-8 w-8 rounded-md ${SWATCHES[level]} ${
-                            shade === level
-                                ? 'ring-2 ring-neutral-900 ring-offset-2 dark:ring-white dark:ring-offset-neutral-950'
-                                : 'hover:ring-2 hover:ring-neutral-300 dark:hover:ring-neutral-700'
+                        className={`h-7 w-7 rounded-md outline outline-1 -outline-offset-1 outline-cell-line ${SWATCHES[level]} ${
+                            shade === level ? 'ring-2 ring-accent ring-offset-2 ring-offset-canvas' : 'hover:ring-2 hover:ring-line'
                         }`}
                     />
                 ))}
             </div>
             {calibration && calibration.dates.length > 0 && (
                 <div className="flex flex-col gap-1 text-sm" aria-live="polite">
-                    <p data-testid="commit-estimate">
-                        ~{plural(calibration.totalCommits, 'commit')} ({calibration.perCell.toLocaleString()} per day)
+                    <p data-testid="commit-estimate" className="text-muted">
+                        About {plural(calibration.totalCommits, 'commit')}, {calibration.perCell.toLocaleString()} per day
                     </p>
                     {(!calibration.exact || calibration.capped) && (
-                        <p className="text-amber-700 dark:text-amber-400">
+                        <p className="text-attention">
                             Some painted days may not land exactly on this shade, because GitHub shades days relative to your
                             busiest ones. It will still be close.
                         </p>
                     )}
                     {calibration.realDaysShifted > 0 && (
-                        <p className="text-neutral-600 dark:text-neutral-400">
+                        <p className="text-muted">
                             {calibration.realDaysShifted.toLocaleString()} of your real days will look a shade lighter.
                         </p>
                     )}
                 </div>
             )}
-        </fieldset>
+        </Row>
     );
 }

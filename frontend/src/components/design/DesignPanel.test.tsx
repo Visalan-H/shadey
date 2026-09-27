@@ -66,7 +66,7 @@ describe('DesignPanel', () => {
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
         // H = 17 pixels, I = 15.
         expect(paintedCells()).toHaveLength(32);
-        expect(screen.getByTestId('commit-estimate')).toHaveTextContent(/32 commits \(1 per day\)/);
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent(/32 commits, 1 per day/);
         expect(screen.getByLabelText('Repo name')).toHaveValue('paint-hi');
     });
 
@@ -89,7 +89,7 @@ describe('DesignPanel', () => {
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
         await userEvent.click(await screen.findByRole('button', { name: 'Paint' }));
 
-        expect(await screen.findByRole('heading', { name: 'Done!' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Painted' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'View repo on GitHub' })).toHaveAttribute('href', 'https://github.com/octo/paint-hi');
 
         const [, init] = fetch.mock.calls.find(([url]) => url === '/api/paintings')!;
@@ -208,11 +208,11 @@ describe('DesignPanel', () => {
         // Twenty busy weeks at 8 a day: the darkest shade needs as many, the lightest just one.
         renderPanel(calendar((_d, week) => (week < 20 ? 8 : 0)));
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
-        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~256 commits (8 per day)');
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('About 256 commits, 8 per day');
 
         await userEvent.click(screen.getByRole('button', { name: 'Shade 1' }));
         expect(screen.getByRole('button', { name: 'Shade 1' })).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('~32 commits (1 per day)');
+        expect(screen.getByTestId('commit-estimate')).toHaveTextContent('About 32 commits, 1 per day');
         expect(document.querySelectorAll('[data-level="1"]')).toHaveLength(32);
     });
 

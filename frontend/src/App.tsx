@@ -11,7 +11,7 @@ export function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
-                <div className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+                <div className="min-h-screen">
                     <Header />
                     <main>
                         <Routes>

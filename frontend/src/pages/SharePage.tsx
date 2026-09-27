@@ -6,7 +6,7 @@ import { ApiError } from '../lib/api';
 import { paintingCalendar, useSharedPainting, type SharedPainting } from '../lib/share';
 import type { Calendar } from '../lib/types';
 
-const ctaClass = 'inline-flex rounded-md bg-green-700 px-4 py-2 font-medium text-white hover:bg-green-800';
+const ctaClass = 'btn btn-primary';
 
 // Public share page for one painting.
 export function SharePage() {
@@ -15,8 +15,8 @@ export function SharePage() {
 
     if (isPending) {
         return (
-            <div className="mx-auto max-w-5xl p-4" aria-busy="true">
-                <div className="h-[118px] w-full animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-800" />
+            <div className="mx-auto max-w-5xl px-4 py-8" aria-busy="true">
+                <div className="h-[150px] w-full animate-pulse rounded-md border border-line bg-subtle" />
                 <span className="sr-only">Loading painting…</span>
             </div>
         );
@@ -28,7 +28,7 @@ export function SharePage() {
         if (data?.status === 'deleted') message = `@${data.login} removed this painting.`;
         else if (notFound) message = "This painting doesn't exist.";
         return (
-            <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 p-4">
+            <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 px-4 py-8">
                 <p className="text-lg">{message}</p>
                 <Link to="/" className={ctaClass}>
                     Paint yours
@@ -67,19 +67,19 @@ function Painting({ painting }: { painting: SharedPainting }) {
     }, [title]);
 
     return (
-        <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+        <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-8">
             <div className="flex flex-col gap-1">
-                <h1 className="text-xl font-semibold break-words">{title}</h1>
-                <p className="text-sm text-neutral-500">
+                <h1 className="text-2xl font-semibold break-words text-balance">{title}</h1>
+                <p className="text-muted">
                     Painted {where} of{' '}
-                    <a href={`https://github.com/${painting.login}`} target="_blank" rel="noreferrer" className="hover:underline">
+                    <a href={`https://github.com/${painting.login}`} target="_blank" rel="noreferrer" className="link">
                         their GitHub graph
                     </a>
                     {painting.repoUrl && (
                         <>
                             {' '}
                             with{' '}
-                            <a href={painting.repoUrl} target="_blank" rel="noreferrer" className="font-mono hover:underline">
+                            <a href={painting.repoUrl} target="_blank" rel="noreferrer" className="link font-mono">
                                 {painting.repoName}
                             </a>
                         </>
@@ -87,7 +87,7 @@ function Painting({ painting }: { painting: SharedPainting }) {
                     .
                 </p>
             </div>
-            <div ref={graphRef} className="rounded-md border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-950">
+            <div ref={graphRef} className="box p-4">
                 <Graph calendar={calendar} focusWeek={paintedCenter(calendar)} />
             </div>
             <ShareButtons shareId={painting.shareId} message={`${title} on their GitHub graph`} captureRef={graphRef} />

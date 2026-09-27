@@ -1,1 +1,135 @@
 @import 'tailwindcss';
+
+/* GitHub's Primer colors, so a painting previews the way it will look on a profile. */
+:root {
+    --gp-canvas: #ffffff;
+    --gp-subtle: #f6f8fa;
+    --gp-header: #f6f8fa;
+    --gp-fg: #1f2328;
+    --gp-muted: #59636e;
+    --gp-line: #d1d9e0;
+    --gp-btn: #f6f8fa;
+    --gp-btn-hover: #eff2f5;
+    --gp-accent: #0969da;
+    --gp-primary: #1f883d;
+    --gp-primary-hover: #1c8139;
+    --gp-primary-line: rgb(31 35 40 / 0.15);
+    --gp-danger: #d1242f;
+    --gp-danger-subtle: #ffebe9;
+    --gp-danger-line: rgb(255 129 130 / 0.4);
+    --gp-success-subtle: #dafbe1;
+    --gp-success-line: rgb(74 194 107 / 0.4);
+    --gp-attention: #9a6700;
+    --gp-attention-subtle: #fff8c5;
+    --gp-attention-line: rgb(212 167 44 / 0.4);
+    --gp-lvl-0: #eff2f5;
+    --gp-lvl-1: #aceebb;
+    --gp-lvl-2: #4ac26b;
+    --gp-lvl-3: #2da44e;
+    --gp-lvl-4: #116329;
+    --gp-cell-line: rgb(31 35 40 / 0.05);
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --gp-canvas: #0d1117;
+        --gp-subtle: #151b23;
+        --gp-header: #010409;
+        --gp-fg: #f0f6fc;
+        --gp-muted: #9198a1;
+        --gp-line: #3d444d;
+        --gp-btn: #212830;
+        --gp-btn-hover: #262c36;
+        --gp-accent: #4493f8;
+        --gp-primary: #238636;
+        --gp-primary-hover: #29903b;
+        --gp-primary-line: rgb(240 246 252 / 0.1);
+        --gp-danger: #f85149;
+        --gp-danger-subtle: #25171c;
+        --gp-danger-line: rgb(248 81 73 / 0.4);
+        --gp-success-subtle: #12261e;
+        --gp-success-line: rgb(46 160 67 / 0.4);
+        --gp-attention: #d29922;
+        --gp-attention-subtle: #272115;
+        --gp-attention-line: rgb(187 128 9 / 0.4);
+        --gp-lvl-0: #151b23;
+        --gp-lvl-1: #033a16;
+        --gp-lvl-2: #196c2e;
+        --gp-lvl-3: #2ea043;
+        --gp-lvl-4: #56d364;
+        --gp-cell-line: rgb(255 255 255 / 0.05);
+        color-scheme: dark;
+    }
+}
+
+@theme inline {
+    --font-sans: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    --color-canvas: var(--gp-canvas);
+    --color-subtle: var(--gp-subtle);
+    --color-header: var(--gp-header);
+    --color-fg: var(--gp-fg);
+    --color-muted: var(--gp-muted);
+    --color-line: var(--gp-line);
+    --color-btn: var(--gp-btn);
+    --color-btn-hover: var(--gp-btn-hover);
+    --color-accent: var(--gp-accent);
+    --color-primary: var(--gp-primary);
+    --color-primary-hover: var(--gp-primary-hover);
+    --color-primary-line: var(--gp-primary-line);
+    --color-danger: var(--gp-danger);
+    --color-danger-subtle: var(--gp-danger-subtle);
+    --color-danger-line: var(--gp-danger-line);
+    --color-success-subtle: var(--gp-success-subtle);
+    --color-success-line: var(--gp-success-line);
+    --color-attention: var(--gp-attention);
+    --color-attention-subtle: var(--gp-attention-subtle);
+    --color-attention-line: var(--gp-attention-line);
+    --color-lvl-0: var(--gp-lvl-0);
+    --color-lvl-1: var(--gp-lvl-1);
+    --color-lvl-2: var(--gp-lvl-2);
+    --color-lvl-3: var(--gp-lvl-3);
+    --color-lvl-4: var(--gp-lvl-4);
+    --color-cell-line: var(--gp-cell-line);
+}
+
+@layer base {
+    body {
+        @apply bg-canvas font-sans text-fg antialiased;
+    }
+    :focus-visible {
+        outline: 2px solid var(--gp-accent);
+        outline-offset: -2px;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-btn px-3 py-[5px] text-sm leading-5 font-medium whitespace-nowrap hover:bg-btn-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-btn;
+    }
+    .btn-primary {
+        @apply border-primary-line bg-primary text-white hover:bg-primary-hover disabled:hover:bg-primary;
+    }
+    .btn-lg {
+        @apply px-4 py-[7px];
+    }
+    .input {
+        @apply min-w-0 rounded-md border border-line bg-canvas px-3 py-[5px] text-sm leading-5 placeholder:text-muted focus:border-accent focus:shadow-[inset_0_0_0_1px_var(--gp-accent)] focus:outline-none aria-[invalid=true]:border-danger;
+    }
+    .box {
+        @apply rounded-md border border-line bg-canvas;
+    }
+    .flash {
+        @apply rounded-md border p-4 text-sm;
+    }
+    .flash-danger {
+        @apply border-danger-line bg-danger-subtle;
+    }
+    .flash-success {
+        @apply border-success-line bg-success-subtle;
+    }
+    .link {
+        @apply text-accent hover:underline;
+    }
+}

@@ -12,7 +12,7 @@ export function AuthButton() {
         return (
             <a
                 href={signInUrl(location.pathname + location.search)}
-                className="inline-flex items-center gap-2 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                className="btn"
             >
                 <GitHubMark />
                 Sign in with GitHub
@@ -62,7 +62,7 @@ function AccountMenu({ me }: { me: Me }) {
     }
 
     const itemClass =
-        'block w-full px-4 py-3 text-left text-sm hover:bg-neutral-100 focus:bg-neutral-100 focus:outline-none sm:py-2 dark:hover:bg-neutral-800 dark:focus:bg-neutral-800';
+        'block w-full px-4 py-3 text-left text-sm hover:bg-accent hover:text-white focus:bg-accent focus:text-white focus:outline-none sm:py-1.5';
 
     return (
         <div ref={rootRef} className="relative">
@@ -80,9 +80,9 @@ function AccountMenu({ me }: { me: Me }) {
                         setOpen(true);
                     }
                 }}
-                className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-green-600 dark:hover:bg-neutral-800"
+                className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 hover:bg-btn-hover"
             >
-                <img src={me.avatarUrl} alt="" width={28} height={28} className="h-7 w-7 rounded-full" />
+                <img src={me.avatarUrl} alt="" width={28} height={28} className="h-7 w-7 rounded-full border border-line" />
                 <span className="max-w-[10rem] truncate text-sm font-medium">{me.login}</span>
             </button>
             {open && (
@@ -92,7 +92,7 @@ function AccountMenu({ me }: { me: Me }) {
                     role="menu"
                     aria-label="Account"
                     onKeyDown={onMenuKeyDown}
-                    className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+                    className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-line bg-canvas py-1 shadow-[0_8px_24px_rgb(1_4_9/0.2)]"
                 >
                     <Link to="/me" role="menuitem" tabIndex={-1} className={itemClass} onClick={() => setOpen(false)}>
                         My paintings

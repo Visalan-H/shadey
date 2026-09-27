@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { DesignPanel } from '../components/design/DesignPanel';
 import { UsernameForm } from '../components/UsernameForm';
@@ -21,9 +22,19 @@ export function HomePage() {
     }
 
     return (
-        <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4">
-            <div className="flex flex-col gap-3">
-                <p className="text-neutral-500">Paint your GitHub contribution graph. Start by looking one up.</p>
+        <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8">
+            <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5">
+                <div className="flex min-w-0 items-center gap-4">
+                    {login && <Avatar key={login} login={login} />}
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                        <h1 className="text-2xl font-semibold text-balance break-words">{login || 'Paint your GitHub graph'}</h1>
+                        <p className="text-muted">
+                            {login
+                                ? 'Preview a painting here. Nothing is pushed until you paint.'
+                                : 'Look up any username to try it. Sign in to paint your own.'}
+                        </p>
+                    </div>
+                </div>
                 {/* Keyed so back/forward navigation resets the input to the URL's username. */}
                 <UsernameForm
                     key={login}
@@ -38,6 +49,22 @@ export function HomePage() {
     );
 }
 
+// GitHub serves every user's avatar at /<login>.png. Hide it when there's no such user.
+function Avatar({ login }: { login: string }) {
+    const [failed, setFailed] = useState(false);
+    if (failed) return null;
+    return (
+        <img
+            src={`https://github.com/${encodeURIComponent(login)}.png?size=128`}
+            alt=""
+            width={64}
+            height={64}
+            onError={() => setFailed(true)}
+            className="h-16 w-16 shrink-0 rounded-full border border-line"
+        />
+    );
+}
+
 interface GraphSectionProps {
     login: string;
     year?: number;
@@ -49,9 +76,9 @@ export function GraphSection({ login, year, onShowMine }: GraphSectionProps) {
 
     if (isPending) {
         return (
-            <section aria-busy="true" className="flex flex-col gap-2">
-                <div className="h-5 w-56 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
-                <div className="h-[118px] w-full animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-800" />
+            <section aria-busy="true" className="flex flex-col gap-3">
+                <div className="h-6 w-64 animate-pulse rounded bg-subtle" />
+                <div className="h-[150px] w-full animate-pulse rounded-md border border-line bg-subtle" />
                 <span className="sr-only">Loading graph…</span>
             </section>
         );
@@ -59,10 +86,7 @@ export function GraphSection({ login, year, onShowMine }: GraphSectionProps) {
 
     if (error) {
         return (
-            <section
-                role="alert"
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
-            >
+            <section role="alert" className="flash flash-danger">
                 {calendarErrorMessage(error, login)}
             </section>
         );
@@ -70,14 +94,10 @@ export function GraphSection({ login, year, onShowMine }: GraphSectionProps) {
 
     const total = totalContributions(data);
     return (
-        <section className="flex min-w-0 flex-col gap-2">
-            <h2 className="text-sm">
-                <a href={`https://github.com/${data.login}`} className="font-semibold hover:underline" target="_blank" rel="noreferrer">
-                    {data.login}
-                </a>{' '}
-                <span className="text-neutral-500">
-                    · {total.toLocaleString()} contribution{total === 1 ? '' : 's'} {year ? `in ${year}` : 'in the last year'}
-                </span>
+        <section className="flex min-w-0 flex-col gap-3">
+            <h2 className="text-base">
+                {total.toLocaleString()} contribution{total === 1 ? '' : 's'} {year ? `in ${year}` : 'in the last year'}
+                <span className="sr-only"> by {data.login}</span>
             </h2>
             {/* Keyed so switching graphs starts a fresh design, or the draft saved for that graph. */}
             <DesignPanel key={`${data.login}-${year ?? 'rolling'}`} calendar={data} year={year} onShowMine={onShowMine} />

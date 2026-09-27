@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { Calendar, CalendarDay, Level } from '../lib/types';
 
 export interface GraphOverlayCell {
@@ -15,13 +15,13 @@ export interface GraphProps {
     focusWeek?: number;
 }
 
-// GitHub's own palette, light and dark.
+// GitHub's own palette, light and dark, from the theme tokens in index.css.
 const LEVEL_CLASSES: Record<Level, string> = {
-    0: 'bg-[#ebedf0] dark:bg-[#161b22]',
-    1: 'bg-[#9be9a8] dark:bg-[#0e4429]',
-    2: 'bg-[#40c463] dark:bg-[#006d32]',
-    3: 'bg-[#30a14e] dark:bg-[#26a641]',
-    4: 'bg-[#216e39] dark:bg-[#39d353]',
+    0: 'bg-lvl-0',
+    1: 'bg-lvl-1',
+    2: 'bg-lvl-2',
+    3: 'bg-lvl-3',
+    4: 'bg-lvl-4',
 };
 
 const HIGHLIGHT_CLASSES = {
@@ -32,7 +32,7 @@ const HIGHLIGHT_CLASSES = {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
-const CELL = 10;
+const CELL = 12;
 const GAP = 3;
 
 export function describeDay(day: CalendarDay) {
@@ -80,7 +80,7 @@ export function Graph({ calendar, overlay, focusWeek }: GraphProps) {
     return (
         <div ref={scroller} className="max-w-full overflow-x-auto p-1">
             <div
-                className="inline-grid text-[10px] leading-none text-neutral-500 dark:text-neutral-400"
+                className="inline-grid text-xs leading-none text-fg"
                 style={{
                     gridTemplateColumns: `auto repeat(${calendar.weeks.length}, ${CELL}px)`,
                     gridTemplateRows: `auto repeat(7, ${CELL}px)`,
@@ -107,7 +107,7 @@ export function Graph({ calendar, overlay, focusWeek }: GraphProps) {
                         if (!day && !over) return null;
                         const drawn = over?.level ?? day?.level;
                         const classes = [
-                            'rounded-[2px]',
+                            'rounded-[2px] outline outline-1 -outline-offset-1 outline-cell-line',
                             drawn === undefined ? '' : LEVEL_CLASSES[drawn],
                             dimReal && over?.level === undefined ? 'opacity-60' : '',
                             over?.highlight ? HIGHLIGHT_CLASSES[over.highlight] : '',
@@ -127,6 +127,22 @@ export function Graph({ calendar, overlay, focusWeek }: GraphProps) {
                     }),
                 )}
             </div>
+        </div>
+    );
+}
+
+// GitHub's "Less ... More" key under the graph.
+export function GraphLegend({ children }: { children?: ReactNode }) {
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
+            <span>{children}</span>
+            <span className="flex items-center gap-[3px]" aria-hidden="true">
+                <span className="mr-1">Less</span>
+                {([0, 1, 2, 3, 4] as const).map((level) => (
+                    <i key={level} className={`h-2.5 w-2.5 rounded-[2px] outline outline-1 -outline-offset-1 outline-cell-line ${LEVEL_CLASSES[level]}`} />
+                ))}
+                <span className="ml-1">More</span>
+            </span>
         </div>
     );
 }

@@ -15,8 +15,9 @@ import { clearDraft, loadDraft, saveDraft, type Draft } from '../../lib/draft';
 import { defaultRepoName, repoNameError, type PaintRequest, type PaintResult } from '../../lib/paint';
 import { signInUrl, useMe } from '../../lib/auth';
 import type { Calendar, Pattern, Shade } from '../../lib/types';
-import { Graph } from '../Graph';
+import { Graph, GraphLegend } from '../Graph';
 import { PaintAction } from './PaintAction';
+import { Row } from './Row';
 import { PaintDone } from './PaintDone';
 import { PixelEditor } from './PixelEditor';
 import { PlacementControls } from './PlacementControls';
@@ -46,8 +47,7 @@ function fresh(login: string, year: number | undefined): Draft {
     return { login, year, source: 'text', text: '', drawn: null, offset: null, shade: 4, repoName: null, isPrivate: false };
 }
 
-const inputClass =
-    'min-w-0 rounded-md border border-neutral-300 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900 aria-[invalid=true]:border-red-500';
+const TABS = ['text', 'draw'] as const;
 
 export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const [draft, setDraft] = useState<Draft>(() => loadDraft(calendar.login, year) ?? fresh(calendar.login, year));
@@ -128,7 +128,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
 
     return (
         <div className="flex flex-col gap-6">
-            <div ref={graphRef} className="rounded-md border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-950">
+            <div ref={graphRef} className="box flex flex-col gap-2 p-4">
                 <Graph
                     calendar={calendar}
                     focusWeek={width > 0 ? offset + Math.floor(width / 2) : undefined}
@@ -138,6 +138,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                         return done && cell ? (cell.level === undefined ? undefined : { level: cell.level }) : cell;
                     }}
                 />
+                <GraphLegend>{!done && width > 0 ? 'Your real days are dimmed while you design.' : null}</GraphLegend>
             </div>
 
             {done ? (
@@ -145,10 +146,11 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                     <ShareButtons shareId={done.shareId} text={draft.text} captureRef={graphRef} />
                 </PaintDone>
             ) : (
-                <div className="flex flex-col gap-6">
-                    <section className="flex flex-col gap-3">
-                        <div role="tablist" aria-label="Design with" className="flex">
-                            {(['text', 'draw'] as const).map((tab, i) => (
+                <div className="box">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-md border-b border-line bg-subtle px-4 py-3">
+                        <h3 className="text-sm font-semibold">Design</h3>
+                        <div role="tablist" aria-label="Design with" className="flex rounded-md bg-btn-hover p-0.5">
+                            {TABS.map((tab) => (
                                 <button
                                     key={tab}
                                     type="button"
@@ -161,40 +163,36 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                                                 : { source: tab },
                                         )
                                     }
-                                    className={`border border-neutral-300 px-4 py-1.5 text-sm dark:border-neutral-700 ${
-                                        i === 0 ? 'rounded-l-md' : '-ml-px rounded-r-md'
-                                    } ${
+                                    className={`rounded-[5px] border px-3 py-0.5 text-sm ${
                                         draft.source === tab
-                                            ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                                            : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                            ? 'border-line bg-canvas font-semibold'
+                                            : 'border-transparent text-muted hover:text-fg'
                                     }`}
                                 >
                                     {tab === 'text' ? 'Text' : 'Draw'}
                                 </button>
                             ))}
                         </div>
-                        {draft.source === 'text' ? (
-                            <div className="flex flex-col gap-1">
-                                <label htmlFor="paint-text" className="text-sm font-medium">
-                                    Text
-                                </label>
-                                <input
-                                    id="paint-text"
-                                    value={draft.text}
-                                    maxLength={MAX_TEXT}
-                                    onChange={(e) => update({ text: e.target.value })}
-                                    placeholder="HIRE ME"
-                                    autoComplete="off"
-                                    className={inputClass}
-                                />
-                                <p className="text-sm text-neutral-500">
-                                    About 8 letters fit on the graph. Switch to Draw to touch it up by hand.
-                                </p>
-                            </div>
-                        ) : (
+                    </div>
+
+                    {draft.source === 'text' ? (
+                        <Row label={<label htmlFor="paint-text">Text</label>}>
+                            <input
+                                id="paint-text"
+                                value={draft.text}
+                                maxLength={MAX_TEXT}
+                                onChange={(e) => update({ text: e.target.value })}
+                                placeholder="HIRE ME"
+                                autoComplete="off"
+                                className="input w-full font-mono tracking-[0.2em] uppercase sm:max-w-xs"
+                            />
+                            <p className="text-sm text-muted">About 8 letters fit. Switch to Draw to touch it up by hand.</p>
+                        </Row>
+                    ) : (
+                        <Row label="Pixels">
                             <PixelEditor pattern={draft.drawn ?? emptyPattern(BLANK_WIDTH)} onChange={(drawn) => update({ drawn })} />
-                        )}
-                    </section>
+                        </Row>
+                    )}
 
                     {width > 0 && (
                         <PlacementControls
@@ -221,69 +219,63 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                         calibration={width > 0 && !tooWide ? preview.calibration : null}
                     />
 
-                    <section className="flex flex-col gap-3">
-                        <div className="flex flex-col gap-1">
-                            <label htmlFor="repo-name" className="text-sm font-medium">
-                                Repo name
-                            </label>
+                    <Row label={<label htmlFor="repo-name">Repo name</label>}>
+                        <input
+                            id="repo-name"
+                            value={repoName}
+                            maxLength={100}
+                            onChange={(e) => {
+                                setServerRepoError(null);
+                                update({ repoName: e.target.value });
+                            }}
+                            autoComplete="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            aria-invalid={repoError ? true : undefined}
+                            aria-describedby="repo-name-help"
+                            className="input w-full font-mono sm:max-w-xs"
+                        />
+                        <p id="repo-name-help" className={`text-sm ${repoError ? 'text-danger' : 'text-muted'}`}>
+                            {repoError ?? 'A new repo is created for this painting. Delete it any time to undo.'}
+                        </p>
+                        <label className="flex items-center gap-2 text-sm">
                             <input
-                                id="repo-name"
-                                value={repoName}
-                                maxLength={100}
-                                onChange={(e) => {
-                                    setServerRepoError(null);
-                                    update({ repoName: e.target.value });
-                                }}
-                                autoComplete="off"
-                                autoCapitalize="off"
-                                spellCheck={false}
-                                aria-invalid={repoError ? true : undefined}
-                                aria-describedby="repo-name-help"
-                                className={`${inputClass} font-mono sm:max-w-sm`}
+                                type="checkbox"
+                                checked={draft.isPrivate}
+                                onChange={(e) => update({ isPrivate: e.target.checked })}
+                                className="h-4 w-4 accent-accent"
                             />
-                            <p id="repo-name-help" className={`text-sm ${repoError ? 'text-red-600 dark:text-red-400' : 'text-neutral-500'}`}>
-                                {repoError ?? 'A new repo is created for this painting. Delete it any time to undo.'}
-                            </p>
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                            <label className="flex items-center gap-2 text-sm font-medium">
-                                <input
-                                    type="checkbox"
-                                    checked={draft.isPrivate}
-                                    onChange={(e) => update({ isPrivate: e.target.checked })}
-                                    className="h-4 w-4 accent-green-700"
-                                />
-                                Private repo
-                            </label>
-                            {draft.isPrivate && (
-                                <div className="flex flex-col gap-1 text-sm text-neutral-600 dark:text-neutral-400">
+                            Private repo
+                        </label>
+                        {draft.isPrivate && (
+                            <div className="flex flex-col gap-1 text-sm text-muted">
+                                <p>
+                                    A private painting only shows on your graph if "Private contributions" is turned on in your GitHub
+                                    profile settings.
+                                </p>
+                                {me && !hasRepoScope && (
                                     <p>
-                                        A private painting only shows on your graph if "Private contributions" is turned on in your GitHub
-                                        profile settings.
+                                        GitHub needs to give Graph Painter permission to create private repos.{' '}
+                                        <a href={signInUrl(undefined, 'repo')} className="link font-medium">
+                                            Grant permission on GitHub
+                                        </a>
                                     </p>
-                                    {me && !hasRepoScope && (
-                                        <p>
-                                            GitHub needs to give Graph Painter permission to create private repos.{' '}
-                                            <a href={signInUrl(undefined, 'repo')} className="font-medium text-green-800 underline underline-offset-2 dark:text-green-400">
-                                                Grant permission on GitHub
-                                            </a>
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </section>
+                                )}
+                            </div>
+                        )}
+                    </Row>
 
-                    <PaintAction
-                        graphLogin={calendar.login}
-                        request={request}
-                        blocked={blocked}
-                        totalCommits={preview.calibration.totalCommits}
-                        onPainted={painted}
-                        onShowMine={onShowMine}
-                        onRepoNameError={setServerRepoError}
-                    />
+                    <div className="rounded-b-md border-t border-line bg-subtle px-4 py-3">
+                        <PaintAction
+                            graphLogin={calendar.login}
+                            request={request}
+                            blocked={blocked}
+                            totalCommits={preview.calibration.totalCommits}
+                            onPainted={painted}
+                            onShowMine={onShowMine}
+                            onRepoNameError={setServerRepoError}
+                        />
+                    </div>
                 </div>
             )}
         </div>
