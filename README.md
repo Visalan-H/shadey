@@ -16,6 +16,8 @@ cd backend && npm install && npm run dev    # API on :3001
 cd frontend && npm install && npm run dev   # site on :5173, forwards /api, /p, /og to :3001
 ```
 
+Copy `.env.example` to `.env` in both folders first. `VITE_API_URL` in `frontend/.env` is the backend the dev server forwards to.
+
 Each folder has `npm test`, `npm run typecheck` and `npm run lint`.
 
 ## Deploy
