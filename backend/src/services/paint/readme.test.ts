@@ -8,7 +8,7 @@ describe('paintReadme', () => {
         const md = paintReadme({ ...base, text: '  Hire\nme ' });
         expect(md).toContain('"Hire me"');
         expect(md).toContain("@octocat's GitHub contribution graph");
-        expect(md).toContain('[Graph Painter](https://paint.test)');
+        expect(md).toContain('[Shadey](https://paint.test)');
         expect(md).toMatch(/empty and backdated/);
         expect(md).toMatch(/Delete this repository/);
         expect(md).toMatch(/Danger Zone/);

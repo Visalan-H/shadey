@@ -10,7 +10,7 @@ const schema = z.object({
     SESSION_SECRET: z.string().min(32),
     // AES-256-GCM key for stored GitHub tokens. 32 random bytes, base64.
     TOKEN_ENCRYPTION_KEY: z.string().min(1),
-    // Public frontend origin, e.g. https://git-painted.vercel.app (OAuth callbacks, share links).
+    // Public frontend origin, e.g. https://shadey.vercel.app (OAuth callbacks, share links).
     APP_URL: z.string().url(),
 });
 

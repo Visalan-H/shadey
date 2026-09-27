@@ -48,7 +48,7 @@ describe('GET /api/auth/login', () => {
         expect(location.origin + location.pathname).toBe('https://github.com/login/oauth/authorize');
         expect(location.searchParams.get('client_id')).toBe('test-client-id');
         expect(location.searchParams.get('scope')).toBe('read:user public_repo');
-        expect(location.searchParams.get('redirect_uri')).toBe('https://painter.test/api/auth/callback');
+        expect(location.searchParams.get('redirect_uri')).toBe('https://shadey.test/api/auth/callback');
         expect(state.length).toBeGreaterThan(10);
         const cookie = setCookie(res.headers, 'gp_oauth');
         expect(cookie).toMatch(/HttpOnly/);
@@ -78,7 +78,7 @@ describe('GET /api/auth/callback', () => {
         const res = await request(app).get('/api/auth/callback').query({ code: 'abc', state }).set('Cookie', cookie);
 
         expect(res.status).toBe(302);
-        expect(res.headers.location).toBe('https://painter.test/draw?x=1');
+        expect(res.headers.location).toBe('https://shadey.test/draw?x=1');
         const session = setCookie(res.headers, 'gp_session');
         expect(session).toMatch(/HttpOnly/);
         expect(session).toMatch(/SameSite=Lax/);
@@ -104,7 +104,7 @@ describe('GET /api/auth/callback', () => {
     it('rejects a state that does not match the cookie', async () => {
         const { cookie } = await startLogin();
         const res = await request(app).get('/api/auth/callback').query({ code: 'abc', state: 'forged' }).set('Cookie', cookie);
-        expect(res.headers.location).toBe('https://painter.test/?auth_error=1');
+        expect(res.headers.location).toBe('https://shadey.test/?auth_error=1');
         expect(setCookie(res.headers, 'gp_session')).toBeUndefined();
         expect(await User.countDocuments()).toBe(0);
     });
@@ -112,13 +112,13 @@ describe('GET /api/auth/callback', () => {
     it('rejects a callback without the state cookie', async () => {
         const { state } = await startLogin();
         const res = await request(app).get('/api/auth/callback').query({ code: 'abc', state });
-        expect(res.headers.location).toBe('https://painter.test/?auth_error=1');
+        expect(res.headers.location).toBe('https://shadey.test/?auth_error=1');
     });
 
     it('handles the user cancelling on GitHub', async () => {
         const { state, cookie } = await startLogin();
         const res = await request(app).get('/api/auth/callback').query({ error: 'access_denied', state }).set('Cookie', cookie);
-        expect(res.headers.location).toBe('https://painter.test/?auth_error=1');
+        expect(res.headers.location).toBe('https://shadey.test/?auth_error=1');
     });
 
     it('handles a failed code exchange', async () => {
@@ -127,7 +127,7 @@ describe('GET /api/auth/callback', () => {
         const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
         const res = await request(app).get('/api/auth/callback').query({ code: 'stale', state }).set('Cookie', cookie);
         errors.mockRestore();
-        expect(res.headers.location).toBe('https://painter.test/?auth_error=1');
+        expect(res.headers.location).toBe('https://shadey.test/?auth_error=1');
         expect(await User.countDocuments()).toBe(0);
     });
 });

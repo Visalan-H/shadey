@@ -153,7 +153,7 @@ function fallbackPage(title: string, tags: string) {
         '</head>',
         '<body>',
         `<p>${title}</p>`,
-        `<p><a href="${home}">Open Graph Painter</a></p>`,
+        `<p><a href="${home}">Open Shadey</a></p>`,
         '</body>',
         '</html>',
     ].join('\n');
@@ -162,7 +162,7 @@ function fallbackPage(title: string, tags: string) {
 router.get('/p/:shareId', async (req, res) => {
     const { shareId } = req.params;
     const painting = await findPainting(shareId);
-    const title = painting ? escapeHtml(`${shareTitle(painting)} · Graph Painter`) : 'Graph Painter';
+    const title = painting ? escapeHtml(`${shareTitle(painting)} · Shadey`) : 'Shadey';
     const tags = painting ? metaTags(shareId, painting) : '';
 
     let html: string;

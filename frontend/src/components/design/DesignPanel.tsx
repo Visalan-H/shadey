@@ -255,7 +255,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                                 </p>
                                 {me && !hasRepoScope && (
                                     <p>
-                                        GitHub needs to give Graph Painter permission to create private repos.{' '}
+                                        GitHub needs to give Shadey permission to create private repos.{' '}
                                         <a href={signInUrl(undefined, 'repo')} className="link font-medium">
                                             Grant permission on GitHub
                                         </a>
