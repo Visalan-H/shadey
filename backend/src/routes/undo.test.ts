@@ -141,7 +141,7 @@ describe('"Delete for me"', () => {
 
     async function start(cookie: string, shareId: string) {
         const res = await request(app).get('/api/auth/delete').query({ painting: shareId }).set('Cookie', cookie);
-        const location = new URL(res.headers.location ?? '', 'https://painter.test');
+        const location = new URL(res.headers.location ?? '', 'https://shadey.test');
         return { res, location, state: location.searchParams.get('state') ?? '', deleteCookie: cookiePair(setCookie(res.headers, 'gp_delete')) };
     }
 
@@ -160,7 +160,7 @@ describe('"Delete for me"', () => {
         expect(res.status).toBe(302);
         expect(location.origin + location.pathname).toBe('https://github.com/login/oauth/authorize');
         expect(location.searchParams.get('scope')).toBe('delete_repo');
-        expect(location.searchParams.get('redirect_uri')).toBe('https://painter.test/api/auth/callback/delete');
+        expect(location.searchParams.get('redirect_uri')).toBe('https://shadey.test/api/auth/callback/delete');
     });
 
     it('also asks for repo when the painting is private', async () => {
@@ -177,7 +177,7 @@ describe('"Delete for me"', () => {
 
         const res = await finish(cookie, p.shareId);
         expect(res.status).toBe(302);
-        expect(res.headers.location).toBe(`https://painter.test/me?deleted=${p.shareId}`);
+        expect(res.headers.location).toBe(`https://shadey.test/me?deleted=${p.shareId}`);
         expect(calls.deleted).toEqual([`user7/${p.repoName}`]);
         expect(calls.deleteAuth[0]).toContain(DELETE_TOKEN);
         expect(calls.revoked).toEqual([DELETE_TOKEN]);
@@ -197,7 +197,7 @@ describe('"Delete for me"', () => {
         const { user, cookie } = await makeUser();
         const p = await makePainting(user._id);
         const res = await finish(cookie, p.shareId);
-        expect(res.headers.location).toBe(`https://painter.test/me?deleted=${p.shareId}`);
+        expect(res.headers.location).toBe(`https://shadey.test/me?deleted=${p.shareId}`);
         expect((await PaintingModel.findById(p._id))?.status).toBe('deleted');
     });
 
@@ -206,7 +206,7 @@ describe('"Delete for me"', () => {
         const { user, cookie } = await makeUser();
         const p = await makePainting(user._id);
         const res = await finish(cookie, p.shareId);
-        expect(res.headers.location).toBe(`https://painter.test/me?delete_error=${p.shareId}`);
+        expect(res.headers.location).toBe(`https://shadey.test/me?delete_error=${p.shareId}`);
         expect(calls.deleted).toEqual([]);
         expect(calls.revoked).toEqual([DELETE_TOKEN]);
         expect((await PaintingModel.findById(p._id))?.status).toBe('painted');
@@ -245,6 +245,6 @@ describe('"Delete for me"', () => {
         const { user: other } = await makeUser(8);
         const p = await makePainting(other._id);
         const { res } = await start(cookie, p.shareId);
-        expect(res.headers.location).toBe(`https://painter.test/me?delete_error=${p.shareId}`);
+        expect(res.headers.location).toBe(`https://shadey.test/me?delete_error=${p.shareId}`);
     });
 });

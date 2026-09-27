@@ -120,7 +120,7 @@ describe('POST /api/paintings', () => {
 
         expect(res.status).toBe(201);
         expect(res.body).toEqual({ shareId: expect.any(String), repoUrl: 'https://github.com/octo/paint-hi', repoName: 'paint-hi', commitCount: 4 });
-        expect(calls.created[0]).toMatchObject({ name: 'paint-hi', private: false, homepage: `https://painter.test/p/${res.body.shareId}` });
+        expect(calls.created[0]).toMatchObject({ name: 'paint-hi', private: false, homepage: `https://shadey.test/p/${res.body.shareId}` });
 
         // One commit per count; the README rides along. Authored as the noreply address at noon UTC.
         expect((await git.git('octo/paint-hi', 'rev-list', '--count', 'main')).trim()).toBe('4');

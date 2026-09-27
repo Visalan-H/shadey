@@ -14,7 +14,7 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 const PADDING = 60;
 const MAX_TITLE = 32;
-const DEFAULT_DOMAIN = 'git-painted.vercel.app';
+const DEFAULT_DOMAIN = 'shadey.vercel.app';
 
 // GitHub's light theme contribution shades, indexed by Level.
 const PALETTE = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];

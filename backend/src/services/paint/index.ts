@@ -69,9 +69,9 @@ export function noreplyEmail(user: { login: string; githubId: number }): string 
 
 function repoDescription(text: string | undefined): string {
     const clean = (text ?? '').replace(/[\s\p{Cc}]+/gu, ' ').trim();
-    if (!clean) return 'A contribution graph painting made with Graph Painter';
+    if (!clean) return 'A contribution graph painting made with Shadey';
     const shown = clean.length > 200 ? `${clean.slice(0, 200)}...` : clean;
-    return `"${shown}" painted on my contribution graph with Graph Painter`;
+    return `"${shown}" painted on my contribution graph with Shadey`;
 }
 
 export async function paint(input: PaintInput): Promise<PaintResult> {

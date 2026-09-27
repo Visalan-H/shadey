@@ -60,7 +60,7 @@ function Painting({ painting }: { painting: SharedPainting }) {
 
     useEffect(() => {
         const previous = document.title;
-        document.title = `${title} · Graph Painter`;
+        document.title = `${title} · Shadey`;
         return () => {
             document.title = previous;
         };

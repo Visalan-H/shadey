@@ -19,7 +19,7 @@ export function toSummary(p: Pick<Painting, 'shareId' | 'text' | 'repoName' | 'r
 async function repoExists(owner: string, name: string): Promise<boolean | null> {
     try {
         const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, {
-            headers: { accept: 'application/vnd.github+json', 'user-agent': 'git-painted' },
+            headers: { accept: 'application/vnd.github+json', 'user-agent': 'shadey' },
             signal: AbortSignal.timeout(REPO_CHECK_TIMEOUT_MS),
         });
         if (res.status === 200) return true;

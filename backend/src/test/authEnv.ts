@@ -9,7 +9,7 @@ export function setAuthEnv() {
         GITHUB_CLIENT_SECRET: 'test-client-secret',
         SESSION_SECRET: 'x'.repeat(48),
         TOKEN_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
-        APP_URL: 'https://painter.test',
+        APP_URL: 'https://shadey.test',
     });
 }
 

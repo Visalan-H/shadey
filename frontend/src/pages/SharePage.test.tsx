@@ -82,7 +82,7 @@ describe('SharePage', () => {
         expect(screen.getByRole('link', { name: 'Share on X' })).toHaveAttribute('href', expect.stringContaining('on%20their%20GitHub%20graph'));
         expect(screen.getByRole('button', { name: 'Download image' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Paint yours' })).toHaveAttribute('href', '/');
-        expect(document.title).toBe('@octo painted "HI" · Graph Painter');
+        expect(document.title).toBe('@octo painted "HI" · Shadey');
     });
 
     it('hides the repo link for private paintings', async () => {

@@ -15,7 +15,7 @@ vi.mock('../db.js', () => ({ connectDb: async () => undefined }));
 setAuthEnv();
 useTestDb();
 
-const SHELL = '<!doctype html><html><head><meta charset="UTF-8" /><title>Graph Painter</title></head><body><div id="root"></div></body></html>';
+const SHELL = '<!doctype html><html><head><meta charset="UTF-8" /><title>Shadey</title></head><body><div id="root"></div></body></html>';
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 let shellRequests = 0;
@@ -28,7 +28,7 @@ beforeEach(async () => {
     resetShellCache();
     shellRequests = 0;
     api.use(
-        http.get('https://painter.test/index.html', () => {
+        http.get('https://shadey.test/index.html', () => {
             shellRequests++;
             return new HttpResponse(SHELL, { headers: { 'content-type': 'text/html' } });
         }),
@@ -119,10 +119,10 @@ describe('GET /p/:shareId', () => {
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toMatch(/text\/html/);
         expect(res.text).toContain('<div id="root"></div>');
-        expect(res.text).toContain('<title>@octo painted &#34;HI&#34; · Graph Painter</title>');
-        expect(res.text).not.toContain('<title>Graph Painter</title>');
-        expect(res.text).toContain('<meta property="og:image" content="https://painter.test/og/abc123.png" />');
-        expect(res.text).toContain('<meta property="og:url" content="https://painter.test/p/abc123" />');
+        expect(res.text).toContain('<title>@octo painted &#34;HI&#34; · Shadey</title>');
+        expect(res.text).not.toContain('<title>Shadey</title>');
+        expect(res.text).toContain('<meta property="og:image" content="https://shadey.test/og/abc123.png" />');
+        expect(res.text).toContain('<meta property="og:url" content="https://shadey.test/p/abc123" />');
         expect(res.text).toContain('<meta name="twitter:card" content="summary_large_image" />');
     });
 
@@ -151,13 +151,13 @@ describe('GET /p/:shareId', () => {
 
     it('falls back to a minimal page when the shell cannot be fetched', async () => {
         await makePainting();
-        api.use(http.get('https://painter.test/index.html', () => new HttpResponse('down', { status: 503 })));
+        api.use(http.get('https://shadey.test/index.html', () => new HttpResponse('down', { status: 503 })));
         const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
         const res = await request(app).get('/p/abc123');
         errors.mockRestore();
         expect(res.status).toBe(200);
         expect(res.text).toContain('og:image');
-        expect(res.text).toContain('href="https://painter.test/?from=share"');
+        expect(res.text).toContain('href="https://shadey.test/?from=share"');
     });
 });
 

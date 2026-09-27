@@ -49,7 +49,7 @@ async function revokeToken(accessToken: string) {
                 accept: 'application/vnd.github+json',
                 authorization: `Basic ${Buffer.from(`${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET}`).toString('base64')}`,
                 'content-type': 'application/json',
-                'user-agent': 'git-painted',
+                'user-agent': 'shadey',
             },
             body: JSON.stringify({ access_token: accessToken }),
             signal: AbortSignal.timeout(5000),

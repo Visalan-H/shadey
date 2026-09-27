@@ -4,5 +4,5 @@ import { App } from './App';
 
 it('renders the header', () => {
     render(<App />);
-    expect(screen.getByRole('link', { name: 'Graph Painter' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Shadey' })).toBeInTheDocument();
 });
