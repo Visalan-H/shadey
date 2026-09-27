@@ -17,3 +17,6 @@ coverage/
 
 # planning docs
 PRD.md
+
+# TypeScript build cache
+*.tsbuildinfo
