@@ -99,8 +99,8 @@ export function PixelEditor({ pattern, onChange }: Props) {
     }
 
     const toolClass =
-        'rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-neutral-700 dark:hover:bg-neutral-800';
-    const pressedClass = 'bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200';
+        'btn';
+    const pressedClass = 'bg-canvas font-semibold hover:bg-canvas';
 
     return (
         <div className="flex flex-col gap-2">
@@ -110,7 +110,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
                         type="button"
                         aria-pressed={mode === 'paint'}
                         onClick={() => setMode('paint')}
-                        className={`${toolClass} rounded-r-none ${mode === 'paint' ? pressedClass : ''}`}
+                        className={`${toolClass} rounded-r-none ${mode === 'paint' ? pressedClass : 'text-muted'}`}
                     >
                         Paint
                     </button>
@@ -118,7 +118,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
                         type="button"
                         aria-pressed={mode === 'erase'}
                         onClick={() => setMode('erase')}
-                        className={`${toolClass} -ml-px rounded-l-none ${mode === 'erase' ? pressedClass : ''}`}
+                        className={`${toolClass} -ml-px rounded-l-none ${mode === 'erase' ? pressedClass : 'text-muted'}`}
                     >
                         Erase
                     </button>
@@ -129,7 +129,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
                 <button type="button" onClick={() => change(emptyPattern(width))} disabled={litCount(pattern) === 0} className={toolClass}>
                     Clear
                 </button>
-                <span className="ml-auto flex items-center gap-1 text-sm text-neutral-500">
+                <span className="ml-auto flex items-center gap-1 text-sm text-muted">
                     Columns
                     <button type="button" onClick={removeColumn} disabled={width <= 1} className={toolClass} aria-label="Remove column">
                         −
@@ -163,8 +163,8 @@ export function PixelEditor({ pattern, onChange }: Props) {
                                 aria-pressed={on}
                                 aria-label={`${WEEKDAYS[r]}, column ${c + 1}`}
                                 onClick={(e) => onCellClick(e, r, c)}
-                                className={`rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-600 ${
-                                    on ? 'bg-[#216e39] dark:bg-[#39d353]' : 'bg-[#ebedf0] hover:bg-neutral-300 dark:bg-[#161b22] dark:hover:bg-neutral-700'
+                                className={`rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+                                    on ? 'bg-lvl-4' : 'bg-lvl-0 outline outline-1 -outline-offset-1 outline-cell-line hover:bg-btn-hover'
                                 }`}
                                 style={{ gridRow: r + 1, gridColumn: c + 1 }}
                             />

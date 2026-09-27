@@ -14,7 +14,7 @@ import {
 } from '../lib/myPaintings';
 
 const buttonClass =
-    'inline-flex items-center rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800';
+    'btn';
 
 // The signed-in user's paintings, with both ways to undo one.
 export function MyPaintingsPage() {
@@ -26,10 +26,10 @@ export function MyPaintingsPage() {
 
     if (!me) {
         return (
-            <div className="mx-auto flex max-w-3xl flex-col items-start gap-3 p-4">
+            <div className="mx-auto flex max-w-3xl flex-col items-start gap-3 px-4 py-8">
                 <h1 className="text-xl font-semibold">My paintings</h1>
-                <p className="text-neutral-600 dark:text-neutral-400">Sign in to see and delete your paintings.</p>
-                <a href={signInUrl('/me')} className="rounded-md bg-green-700 px-4 py-2 font-medium text-white hover:bg-green-800">
+                <p className="text-muted">Sign in to see and delete your paintings.</p>
+                <a href={signInUrl('/me')} className="btn btn-primary">
                     Sign in with GitHub
                 </a>
             </div>
@@ -40,34 +40,34 @@ export function MyPaintingsPage() {
     const deleteError = params.get('delete_error');
 
     return (
-        <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
+        <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-8">
             <h1 className="text-xl font-semibold">My paintings</h1>
             {deleted && (
-                <p role="status" className="rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-900 dark:bg-green-950/40">
+                <p role="status" className="flash flash-success">
                     Deleted. The painting disappears from your graph once GitHub catches up, usually within minutes.
                 </p>
             )}
             {deleteError && (
-                <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+                <p role="alert" className="flash flash-danger">
                     The repo wasn't deleted. GitHub didn't grant the delete permission, or you signed in as a different account. Try
                     again, or delete it yourself from the repo's settings.
                 </p>
             )}
             {paintings.isPending ? (
-                <p className="text-neutral-500">Loading…</p>
+                <p className="text-muted">Loading…</p>
             ) : paintings.error ? (
-                <p role="alert" className="text-red-700 dark:text-red-400">
+                <p role="alert" className="text-danger">
                     Couldn't load your paintings. Try again in a moment.
                 </p>
             ) : paintings.data.length === 0 ? (
-                <p className="text-neutral-600 dark:text-neutral-400">
+                <p className="text-muted">
                     Nothing painted yet.{' '}
-                    <Link to={`/?u=${encodeURIComponent(me.login)}`} className="font-medium underline underline-offset-2">
+                    <Link to={`/?u=${encodeURIComponent(me.login)}`} className="link font-medium">
                         Paint your graph
                     </Link>
                 </p>
             ) : (
-                <ul className="flex flex-col gap-3">
+                <ul className="box divide-y divide-line">
                     {paintings.data.map((p) => (
                         <PaintingRow key={p.shareId} painting={p} />
                     ))}
@@ -119,15 +119,15 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
     }
 
     return (
-        <li className="flex flex-col gap-3 rounded-md border border-neutral-200 p-4 dark:border-neutral-800">
+        <li className="flex flex-col gap-3 p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-semibold break-all">{title}</h2>
-                <span className="text-sm text-neutral-500">
+                <span className="text-sm text-muted">
                     {created} · {p.totalCommits.toLocaleString()} commits{p.isPrivate ? ' · private' : ''}
                 </span>
             </div>
             {p.status === 'deleted' ? (
-                <p className="text-sm text-neutral-500">
+                <p className="text-sm text-muted">
                     Deleted. <span className="font-mono">{p.repoName}</span> is gone and the share page says so.
                 </p>
             ) : (
@@ -154,14 +154,14 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
                             {shadeMessage}
                         </p>
                     )}
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-muted">
                         "Delete for me" asks GitHub for permission to delete repos once. We use it for this repo and throw it away.
                     </p>
                     {selfDelete && (
-                        <div className="flex flex-col gap-2 rounded-md bg-neutral-50 p-3 text-sm dark:bg-neutral-900">
+                        <div className="flex flex-col gap-2 rounded-md border border-line bg-subtle p-3 text-sm">
                             <p>
                                 Open the{' '}
-                                <a href={repoSettingsUrl(p.repoUrl)} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+                                <a href={repoSettingsUrl(p.repoUrl)} target="_blank" rel="noreferrer" className="link font-medium">
                                     repo's settings
                                 </a>
                                 , scroll to the Danger Zone and click "Delete this repository". Then come back here.
@@ -171,7 +171,7 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
                                     {markDeleted.isPending ? 'Checking…' : "I've deleted it"}
                                 </button>
                             </div>
-                            {markError && <p className="text-red-700 dark:text-red-400">{markError}</p>}
+                            {markError && <p className="text-danger">{markError}</p>}
                         </div>
                     )}
                 </>

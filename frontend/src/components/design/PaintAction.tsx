@@ -16,35 +16,36 @@ interface Props {
     onRepoNameError: (message: string) => void;
 }
 
-const buttonClass =
-    'inline-flex items-center justify-center rounded-md bg-green-700 px-5 py-2.5 font-medium text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-green-700';
+const buttonClass = 'btn btn-primary btn-lg';
 const linkClass = 'font-medium underline underline-offset-2';
+// Note on the left, button on the right; the button goes on top when they wrap on phones.
+const rowClass = 'flex flex-wrap-reverse items-center justify-between gap-3';
 
 export function PaintAction({ graphLogin, request, blocked, totalCommits, onPainted, onShowMine, onRepoNameError }: Props) {
     const { data: me, isPending: meLoading } = useMe();
     const paint = usePaint();
     const queryClient = useQueryClient();
 
-    if (meLoading) return <div className="h-11" aria-hidden="true" />;
+    if (meLoading) return <div className="h-9" aria-hidden="true" />;
 
     if (!me) {
         return (
-            <div className="flex flex-col gap-2">
-                <a href={signInUrl()} className={`${buttonClass} self-start`}>
+            <div className={rowClass}>
+                <p className="text-sm text-muted">Your design is kept while you sign in.</p>
+                <a href={signInUrl()} className={buttonClass}>
                     Sign in with GitHub to paint
                 </a>
-                <p className="text-sm text-neutral-500">Your design is kept while you sign in.</p>
             </div>
         );
     }
 
     if (me.login.toLowerCase() !== graphLogin.toLowerCase()) {
         return (
-            <div className="flex flex-col gap-2 text-sm">
-                <p>
+            <div className={rowClass}>
+                <p className="text-sm text-muted">
                     This is @{graphLogin}'s graph. You can only paint your own, signed in as @{me.login}.
                 </p>
-                <button type="button" onClick={() => onShowMine(me.login)} className={`${buttonClass} self-start`}>
+                <button type="button" onClick={() => onShowMine(me.login)} className={buttonClass}>
                     Design on my graph
                 </button>
             </div>
@@ -66,24 +67,21 @@ export function PaintAction({ graphLogin, request, blocked, totalCommits, onPain
     }
 
     const disabled = !request || Boolean(blocked) || paint.isPending;
+    let note: string | null = blocked;
+    if (paint.isPending) note = 'Creating the repo and pushing commits. This can take up to a minute.';
+    else if (!note && totalCommits > 0) {
+        note = `Creates a new repo with ${totalCommits.toLocaleString()} empty commit${totalCommits === 1 ? '' : 's'}.`;
+    }
     return (
-        <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-3">
+            <div className={rowClass}>
+                <p className="text-sm text-muted" aria-live="polite">
+                    {note}
+                </p>
                 <button type="button" onClick={submit} disabled={disabled} className={buttonClass}>
                     {paint.isPending ? 'Painting…' : 'Paint'}
                 </button>
-                {!blocked && totalCommits > 0 && (
-                    <span className="text-sm text-neutral-500">
-                        Creates a new repo with {totalCommits.toLocaleString()} empty commit{totalCommits === 1 ? '' : 's'}.
-                    </span>
-                )}
             </div>
-            {blocked && <p className="text-sm text-neutral-600 dark:text-neutral-400">{blocked}</p>}
-            {paint.isPending && (
-                <p className="text-sm text-neutral-500" aria-live="polite">
-                    Creating the repo and pushing commits. This can take up to a minute.
-                </p>
-            )}
             {paint.error && !paint.isPending && <PaintErrorMessage error={paint.error} />}
         </div>
     );
@@ -126,7 +124,7 @@ function PaintErrorMessage({ error }: { error: PaintError }) {
         );
     }
     return (
-        <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+        <p role="alert" className="flash flash-danger">
             {message}
         </p>
     );

@@ -28,8 +28,7 @@ export function shareLinks(url: string, message: string) {
     };
 }
 
-const buttonClass =
-    'inline-flex items-center rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800';
+const buttonClass = 'btn';
 
 export function ShareButtons({ shareId, text, message, captureRef }: Props) {
     const [copied, setCopied] = useState<'yes' | 'failed' | null>(null);
@@ -53,8 +52,9 @@ export function ShareButtons({ shareId, text, message, captureRef }: Props) {
         try {
             // Loaded on demand: only people who download pay for it.
             const { toPng } = await import('html-to-image');
-            const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-            const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: dark ? '#0a0a0a' : '#ffffff' });
+            // The page background, so the image matches the theme it was saved from.
+            const background = getComputedStyle(document.body).backgroundColor;
+            const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: background });
             const a = document.createElement('a');
             a.href = dataUrl;
             a.download = `graph-painting-${shareId}.png`;
@@ -90,11 +90,11 @@ export function ShareButtons({ shareId, text, message, captureRef }: Props) {
                 </span>
             </div>
             {copied === 'failed' && (
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                <p className="text-sm text-muted">
                     Couldn't copy. Here's the link: <span className="select-all break-all font-mono">{url}</span>
                 </p>
             )}
-            {saving === 'failed' && <p className="text-sm text-red-600 dark:text-red-400">Couldn't save the image. Try a screenshot instead.</p>}
+            {saving === 'failed' && <p className="text-sm text-danger">Couldn't save the image. Try a screenshot instead.</p>}
         </div>
     );
 }

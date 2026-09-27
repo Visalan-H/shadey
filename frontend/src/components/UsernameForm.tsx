@@ -40,7 +40,7 @@ export function UsernameForm({ login, year, onSubmit, onYearChange }: Props) {
                     spellCheck={false}
                     aria-invalid={error ? true : undefined}
                     aria-describedby={error ? 'login-error' : undefined}
-                    className="min-w-0 flex-1 basis-48 rounded-md border border-neutral-300 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+                    className="input flex-1 basis-48 sm:max-w-60"
                 />
                 <label htmlFor="year" className="sr-only">
                     Year
@@ -49,7 +49,7 @@ export function UsernameForm({ login, year, onSubmit, onYearChange }: Props) {
                     id="year"
                     value={year ?? ''}
                     onChange={(e) => onYearChange(e.target.value ? Number(e.target.value) : undefined)}
-                    className="rounded-md border border-neutral-300 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+                    className="input pr-8"
                 >
                     <option value="">Last 12 months</option>
                     {selectableYears().map((y) => (
@@ -60,13 +60,13 @@ export function UsernameForm({ login, year, onSubmit, onYearChange }: Props) {
                 </select>
                 <button
                     type="submit"
-                    className="rounded-md bg-green-700 px-4 py-2 font-medium text-white hover:bg-green-800"
+                    className="btn"
                 >
                     Show graph
                 </button>
             </div>
             {error && (
-                <p id="login-error" className="text-sm text-red-600 dark:text-red-400">
+                <p id="login-error" className="text-sm text-danger">
                     {error}
                 </p>
             )}
