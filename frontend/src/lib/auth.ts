@@ -7,6 +7,8 @@ export interface Me {
     avatarUrl: string;
     githubId: number;
     scopes: string[];
+    // Set only for logins listed in the backend's ADMIN_LOGINS.
+    admin?: boolean;
 }
 
 export const meQueryKey = ['me'] as const;
@@ -50,6 +52,19 @@ export function signInUrl(returnTo?: string, extraScope?: 'repo'): string {
     const params = new URLSearchParams({ returnTo: returnTo ?? window.location.pathname + window.location.search });
     if (extraScope) params.set('scope', extraScope);
     return `/api/auth/login?${params}`;
+}
+
+// Deletes the account and everything stored with it; the backend also signs out.
+export function useDeleteAccount() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => api<unknown>('/api/auth/me', { method: 'DELETE' }),
+        onSuccess: () => {
+            saveLoginHint(null);
+            queryClient.clear();
+            queryClient.setQueryData(meQueryKey, null);
+        },
+    });
 }
 
 export function useSignOut() {

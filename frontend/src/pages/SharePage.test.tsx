@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { paintingCalendar, type SharedPainting } from '../lib/share';
@@ -49,6 +50,29 @@ function renderAt(id = 'abc') {
 afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+});
+
+describe('reports and takedowns', () => {
+    it('says when a painting was taken down', async () => {
+        mockApi(410, { error: 'This painting was taken down' });
+        renderAt();
+        expect(await screen.findByText('This painting was taken down.')).toBeInTheDocument();
+    });
+
+    it('sends a report with the reason', async () => {
+        const fetch = vi.fn(async (_url: string, init?: RequestInit) =>
+            init?.method === 'POST'
+                ? new Response(null, { status: 204 })
+                : new Response(JSON.stringify(painting()), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+        );
+        vi.stubGlobal('fetch', fetch);
+        renderAt();
+        await userEvent.click(await screen.findByRole('button', { name: 'Report this painting' }));
+        await userEvent.type(screen.getByLabelText(/What's wrong with it/), 'Offensive');
+        await userEvent.click(screen.getByRole('button', { name: 'Send report' }));
+        expect(await screen.findByText("Thanks. We'll take a look.")).toBeInTheDocument();
+        expect(fetch).toHaveBeenCalledWith('/api/paintings/abc/report', expect.objectContaining({ method: 'POST', body: '{"reason":"Offensive"}' }));
+    });
 });
 
 describe('paintingCalendar', () => {

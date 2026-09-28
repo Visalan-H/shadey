@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { sharePath } from '../components/design/PaintDone';
 import { ApiError } from '../lib/api';
-import { signInUrl, useMe } from '../lib/auth';
+import { signInUrl, useDeleteAccount, useMe } from '../lib/auth';
 import {
     deleteForMeUrl,
     repoSettingsUrl,
@@ -28,6 +28,11 @@ export function MyPaintingsPage() {
         return (
             <div className="mx-auto flex max-w-3xl flex-col items-start gap-3 px-4 py-8">
                 <h1 className="text-xl font-semibold">My paintings</h1>
+                {params.has('account_deleted') && (
+                    <p role="status" className="flash flash-success">
+                        Your account is deleted, and Shadey no longer has access to your GitHub account.
+                    </p>
+                )}
                 <p className="text-muted">Sign in to see and delete your paintings.</p>
                 <a href={signInUrl('/me')} className="btn btn-primary">
                     Sign in with GitHub
@@ -73,7 +78,53 @@ export function MyPaintingsPage() {
                     ))}
                 </ul>
             )}
+            <DeleteAccount />
         </div>
+    );
+}
+
+function DeleteAccount() {
+    const [confirming, setConfirming] = useState(false);
+    const deleteAccount = useDeleteAccount();
+    const navigate = useNavigate();
+
+    return (
+        <section className="mt-6 flex flex-col items-start gap-3 border-t border-line pt-6">
+            <h2 className="font-semibold">Delete account</h2>
+            {confirming ? (
+                <div className="flex flex-col gap-3 rounded-md border border-danger-line p-4 text-sm">
+                    <p>
+                        This deletes everything Shadey stores about you, takes your share pages down and removes Shadey from your GitHub
+                        account. Your painted repos stay on GitHub. Delete them above first if you want them gone.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            disabled={deleteAccount.isPending}
+                            onClick={() => deleteAccount.mutate(undefined, { onSuccess: () => navigate('/me?account_deleted=1', { replace: true }) })}
+                            className="btn btn-danger"
+                        >
+                            {deleteAccount.isPending ? 'Deleting…' : 'Delete my account'}
+                        </button>
+                        <button type="button" onClick={() => setConfirming(false)} disabled={deleteAccount.isPending} className="btn">
+                            Cancel
+                        </button>
+                    </div>
+                    {deleteAccount.error && (
+                        <p role="alert" className="text-danger">
+                            Couldn't delete your account. Try again in a moment.
+                        </p>
+                    )}
+                </div>
+            ) : (
+                <>
+                    <p className="text-sm text-muted">Remove your Shadey account and everything stored with it.</p>
+                    <button type="button" onClick={() => setConfirming(true)} className="btn btn-danger">
+                        Delete account
+                    </button>
+                </>
+            )}
+        </section>
     );
 }
 
@@ -149,6 +200,9 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
                             Delete it myself
                         </button>
                     </div>
+                    {p.status === 'hidden' && (
+                        <p className="text-sm text-muted">The share page was taken down after a report. Your repo on GitHub is unaffected.</p>
+                    )}
                     {shadeMessage && (
                         <p role="status" className="text-sm">
                             {shadeMessage}

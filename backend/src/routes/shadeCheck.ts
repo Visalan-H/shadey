@@ -13,7 +13,7 @@ export function createShadeCheckRouter(deps: ShadeCheckDeps = {}) {
     router.post('/:shareId/check-shades', requireUser, async (req, res) => {
         await connectDb();
         const user = req.user!;
-        const painting = await PaintingModel.findOne({ shareId: req.params.shareId, userId: user._id, status: 'painted' });
+        const painting = await PaintingModel.findOne({ shareId: req.params.shareId, userId: user._id, status: { $ne: 'deleted' } });
         if (!painting) {
             res.status(404).json({ error: 'Painting not found' });
             return;

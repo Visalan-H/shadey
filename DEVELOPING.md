@@ -30,3 +30,7 @@ The frontend forwards `/api`, `/p` and `/og` to the backend, so the browser only
 ## Screenshots
 
 The images in `.github/images/` are screenshots of the running app. `hero.png` is the same file as `frontend/public/og.png`, the site's link preview.
+
+## Reports and takedowns
+
+Share pages have a "Report this painting" link. To review reports, set `ADMIN_LOGINS` in the backend's environment to your GitHub login, or several separated by commas. Sign in as one of them and open `/admin` to see reported paintings. "Take down" hides the share page and its preview image. "Put back" restores them, and neither touches the owner's repo.

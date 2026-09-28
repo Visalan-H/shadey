@@ -29,6 +29,7 @@ function json(body: unknown, status = 200) {
 function mockApi({ user = me as typeof me | null, paintings = [painting()], markStatus = 200, shadeCheck = {} as unknown } = {}) {
     let list = paintings;
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === '/api/auth/me' && init?.method === 'DELETE') return new Response(null, { status: 204 });
         if (url === '/api/auth/me') return json({ user });
         if (url === '/api/me/paintings') return json({ paintings: list });
         if (url.endsWith('/check-shades') && init?.method === 'POST') return json(shadeCheck);
@@ -60,6 +61,23 @@ afterEach(() => {
 });
 
 describe('MyPaintingsPage', () => {
+    it('deletes the account after a confirmation', async () => {
+        const fetch = mockApi();
+        renderAt();
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete account' }));
+        expect(fetch).not.toHaveBeenCalledWith('/api/auth/me', expect.objectContaining({ method: 'DELETE' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+        expect(await screen.findByText(/Your account is deleted/)).toBeInTheDocument();
+        expect(fetch).toHaveBeenCalledWith('/api/auth/me', expect.objectContaining({ method: 'DELETE' }));
+        expect(screen.getByRole('link', { name: 'Sign in with GitHub' })).toBeInTheDocument();
+    });
+
+    it('explains a taken-down share page', async () => {
+        mockApi({ paintings: [painting({ status: 'hidden' })] });
+        renderAt();
+        expect(await screen.findByText(/taken down after a report/)).toBeInTheDocument();
+    });
+
     it('asks signed-out visitors to sign in', async () => {
         mockApi({ user: null });
         renderAt();

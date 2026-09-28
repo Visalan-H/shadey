@@ -66,7 +66,7 @@ router.get('/api/auth/delete', requireUser, async (req, res) => {
         return;
     }
     await connectDb();
-    const painting = await PaintingModel.findOne({ shareId, userId: req.user!._id, status: 'painted' }).select('shareId isPrivate').lean();
+    const painting = await PaintingModel.findOne({ shareId, userId: req.user!._id, status: { $ne: 'deleted' } }).select('shareId isPrivate').lean();
     if (!painting) {
         res.redirect(resultUrl('delete_error', shareId));
         return;
@@ -98,7 +98,7 @@ router.get(CALLBACK_PATH, async (req, res) => {
             fail();
             return;
         }
-        const painting = await PaintingModel.findOne({ shareId, userId: user._id, status: 'painted' });
+        const painting = await PaintingModel.findOne({ shareId, userId: user._id, status: { $ne: 'deleted' } });
         if (!painting) {
             fail();
             return;
