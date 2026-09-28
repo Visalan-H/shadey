@@ -2,9 +2,9 @@
 
 ![A GitHub contribution graph with the word SHADEY painted on it](.github/images/hero.png)
 
-Your contribution graph is the first thing people see on your GitHub profile. Shadey lets you write on it.
+Your empty github graph finally has a job. Shadey lets you draw on your contribution graph and paint it for real.
 
-Type a word, add a sticker, draw a few squares of your own, see it on your real graph and paint it with one click.
+Type a word, drop a sticker, or draw pixel by pixel. Preview it on your real graph, hit paint.
 
 **[Try it at shadey.vercel.app](https://shadey.vercel.app)**
 
