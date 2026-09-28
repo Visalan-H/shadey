@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 
+const CONTACT = 'visalanprivate@gmail.com';
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="flex flex-col gap-2">
@@ -91,6 +93,16 @@ export function PrivacyPage() {
                     You can also cut off Shadey's access at any time from{' '}
                     <a href="https://github.com/settings/applications" target="_blank" rel="noreferrer" className="link">
                         GitHub's authorized apps settings
+                    </a>
+                    .
+                </p>
+            </Section>
+
+            <Section title="Contact">
+                <p>
+                    Questions, data requests or takedown requests go to{' '}
+                    <a href={`mailto:${CONTACT}`} className="link">
+                        {CONTACT}
                     </a>
                     .
                 </p>
