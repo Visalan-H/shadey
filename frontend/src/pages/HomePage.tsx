@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { DesignPanel } from '../components/design/DesignPanel';
 import { UsernameForm } from '../components/UsernameForm';
+import { loginHint, useMe } from '../lib/auth';
 import { calendarErrorMessage, isValidLogin, parseYear, totalContributions, useCalendar } from '../lib/calendar';
 
 // Preview + design + paint.
 export function HomePage() {
     const [params, setParams] = useSearchParams();
+    const { data: me, isPending: meLoading } = useMe();
     const rawLogin = params.get('u') ?? '';
-    const login = isValidLogin(rawLogin) ? rawLogin : '';
+    // Without ?u= in the URL, show the signed-in user's own graph.
+    const ownLogin = me?.login ?? (meLoading ? loginHint() : null) ?? '';
+    const login = isValidLogin(rawLogin) ? rawLogin : ownLogin;
     const year = parseYear(params.get('y'));
 
     // Username and year live in the URL so the preview is shareable and survives reload.

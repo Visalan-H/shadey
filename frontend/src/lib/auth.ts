@@ -11,11 +11,36 @@ export interface Me {
 
 export const meQueryKey = ['me'] as const;
 
+// The login from the last visit. /api/auth/me can take seconds on a cold backend, so the
+// page uses this guess to fill the username and pick what the header shows in the meantime.
+const HINT_KEY = 'shadey:login';
+
+export function loginHint(): string | null {
+    try {
+        return localStorage.getItem(HINT_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function saveLoginHint(login: string | null) {
+    try {
+        if (login) localStorage.setItem(HINT_KEY, login);
+        else localStorage.removeItem(HINT_KEY);
+    } catch {
+        // Storage blocked: every visit waits for /api/auth/me instead.
+    }
+}
+
 // The signed-in user, or null when signed out. `data` is undefined while loading.
 export function useMe() {
     return useQuery({
         queryKey: meQueryKey,
-        queryFn: async () => (await api<{ user: Me | null }>('/api/auth/me')).user,
+        queryFn: async () => {
+            const { user } = await api<{ user: Me | null }>('/api/auth/me');
+            saveLoginHint(user?.login ?? null);
+            return user;
+        },
         staleTime: 5 * 60 * 1000,
     });
 }
@@ -31,6 +56,9 @@ export function useSignOut() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: () => api<unknown>('/api/auth/logout', { method: 'POST' }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: meQueryKey }),
+        onSuccess: () => {
+            saveLoginHint(null);
+            return queryClient.invalidateQueries({ queryKey: meQueryKey });
+        },
     });
 }
