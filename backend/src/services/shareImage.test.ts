@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Level } from '../types.js';
-import { renderShareImage } from './shareImage.js';
+import { headline, renderShareImage } from './shareImage.js';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -23,6 +23,11 @@ describe('renderShareImage', () => {
         expect(pngSize(png)).toEqual({ width: 1200, height: 630 });
         expect(Date.now() - start).toBeLessThan(10_000);
     }, 20_000);
+
+    it('leaves stickers out of the headline, since the font has no glyphs for them', () => {
+        expect(headline('octo', 'I ♥ CODE 👾')).toBe('@octo painted "I CODE"');
+        expect(headline('octo', '♥')).toBe('@octo painted their graph');
+    });
 
     it('renders an empty grid', async () => {
         const png = await renderShareImage({ login: 'octocat', title: '', weeks: [] });

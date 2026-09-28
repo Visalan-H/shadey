@@ -2,13 +2,14 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { emptyPattern } from '../../lib/design';
+import { emptyPattern, inkWidth, textLayer, type Ink } from '../../lib/design';
 import type { Pattern } from '../../lib/types';
 import { PixelEditor } from './PixelEditor';
 
-function Harness({ start = emptyPattern(4) }: { start?: Pattern }) {
-    const [pattern, setPattern] = useState(start);
-    return <PixelEditor pattern={pattern} onChange={setPattern} />;
+function Harness({ start = emptyPattern(4), base = emptyPattern(0) }: { start?: Pattern; base?: Pattern }) {
+    const [ink, setInk] = useState<Ink>(start);
+    const columns = Math.max(inkWidth(ink), base[0]!.length);
+    return <PixelEditor base={base} ink={ink} columns={columns} minColumns={Math.max(1, base[0]!.length)} onChange={setInk} />;
 }
 
 const cell = (weekday: string, col: number) => screen.getByRole('button', { name: `${weekday}, column ${col}` });
@@ -86,7 +87,24 @@ describe('PixelEditor', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Remove column' }));
         expect(screen.queryByRole('button', { name: 'Sunday, column 2' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Remove column' })).toBeDisabled();
-        await userEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Clear drawing' }));
         expect(lit()).toHaveLength(0);
+    });
+
+    it('draws over text without losing it', async () => {
+        // "I" is 5 wide, plus a blank column either side.
+        render(<Harness start={emptyPattern(0)} base={textLayer('I')} />);
+        expect(lit()).toHaveLength(15);
+        await userEvent.click(cell('Sunday', 7));
+        await userEvent.click(screen.getByRole('button', { name: 'Erase' }));
+        await userEvent.click(cell('Sunday', 2));
+        expect(lit()).toHaveLength(15);
+        expect(cell('Sunday', 2)).toHaveAttribute('aria-pressed', 'false');
+        // Clearing the drawing brings the text back as typed.
+        await userEvent.click(screen.getByRole('button', { name: 'Clear drawing' }));
+        expect(lit()).toHaveLength(15);
+        expect(cell('Sunday', 2)).toHaveAttribute('aria-pressed', 'true');
+        // The text can't be cut off by removing columns.
+        expect(screen.getByRole('button', { name: 'Remove column' })).toBeDisabled();
     });
 });

@@ -4,7 +4,7 @@
 
 Your contribution graph is the first thing people see on your GitHub profile. Shadey lets you write on it.
 
-Type a word or draw something, see it on your real graph, and paint it with one click.
+Type a word, add a sticker, draw a few squares of your own, see it on your real graph and paint it with one click.
 
 **[Try it at shadey.vercel.app](https://shadey.vercel.app)**
 
@@ -17,15 +17,17 @@ That's a real graph with HIRE ME painted over it. Your own days stay visible, an
 ## How it works
 
 1. Enter your GitHub username. Shadey shows your graph as it looks today.
-2. Type a word or switch to Draw and fill in squares yourself. The painting appears on your graph as you go.
+2. Type a word, tap a sticker like a heart or a space invader, and fill in squares by hand. The painting appears on your graph as you go.
 3. Pick where it goes and how dark it should be. "Find best spot" moves it to the quietest part of your year.
 4. Sign in with GitHub and press Paint. Shadey creates one new repo with empty commits dated on the days you painted, and those squares turn green.
 
 ## Draw anything
 
-![A heart drawn in the pixel editor and previewed on the graph](.github/images/draw.png)
+![I ♥ GH typed with a heart sticker and previewed on the graph](.github/images/draw.png)
 
-Letters are the quick option. The Draw tab gives you a grid the same height as your graph, so hearts, logos and tiny space invaders all work. On a phone, one finger draws and two fingers scroll.
+Words, stickers and drawing all go in the same painting, so "I ♥ CODE" with a hand-drawn underline is one design. There are 11 stickers ready to go, including hearts, stars, skulls, crowns and music notes. Heart and star emoji from your phone keyboard work too.
+
+Under the text box sits a grid the same height as your graph. Draw on it to add squares or erase parts of a letter. Change the text afterwards and your drawing stays put. On a phone, one finger draws and two fingers scroll.
 
 ## Questions people ask
 

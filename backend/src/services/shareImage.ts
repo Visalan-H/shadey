@@ -51,9 +51,15 @@ function truncate(text: string, max: number) {
     return chars.length > max ? `${chars.slice(0, max - 1).join('').trimEnd()}…` : chars.join('');
 }
 
-function headline(login: string, title: string) {
+// The bundled font only covers Latin, so stickers would render as empty boxes. The grid
+// below already shows them.
+function latinOnly(text: string) {
+    return text.replace(/[^\x20-\x7E\u00A0-\u024F]/g, '').replace(/\s+/g, ' ');
+}
+
+export function headline(login: string, title: string) {
     const name = `@${truncate(login, 39)}`;
-    const clean = truncate(title, MAX_TITLE);
+    const clean = truncate(latinOnly(title), MAX_TITLE);
     return clean ? `${name} painted "${clean}"` : `${name} painted their graph`;
 }
 

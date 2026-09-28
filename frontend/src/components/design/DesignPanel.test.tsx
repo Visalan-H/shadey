@@ -167,25 +167,45 @@ describe('DesignPanel', () => {
         expect(screen.getByLabelText('Repo name')).not.toHaveAttribute('aria-invalid');
     });
 
-    it('starts the pixel editor from the text', async () => {
+    it('shows the text in the pixel editor', async () => {
         mockApi();
         renderPanel();
         await userEvent.type(screen.getByLabelText('Text'), 'I');
-        await userEvent.click(screen.getByRole('tab', { name: 'Draw' }));
         const editor = screen.getByRole('group', { name: 'Pixel editor' });
-        // "I" plus a blank column either side.
+        // "I" plus a blank column either side, inside the default 20-column canvas.
         expect(within(editor).getAllByRole('button', { pressed: true })).toHaveLength(15);
-        expect(within(editor).getAllByRole('button')).toHaveLength(7 * 7);
+        expect(within(editor).getAllByRole('button')).toHaveLength(7 * 20);
     });
 
     it('updates the graph live while drawing', async () => {
         mockApi();
         renderPanel();
-        await userEvent.click(screen.getByRole('tab', { name: 'Draw' }));
         expect(paintedCells()).toHaveLength(0);
         await userEvent.click(screen.getByRole('button', { name: 'Monday, column 3' }));
         await userEvent.click(screen.getByRole('button', { name: 'Tuesday, column 4' }));
         expect(paintedCells()).toHaveLength(2);
+    });
+
+    it('paints text and drawing together', async () => {
+        mockApi();
+        renderPanel();
+        await userEvent.type(screen.getByLabelText('Text'), 'I');
+        // Column 9 is past the I; drawing there joins the painting.
+        await userEvent.click(screen.getByRole('button', { name: 'Sunday, column 9' }));
+        expect(paintedCells()).toHaveLength(16);
+        // Changing the text keeps the drawing.
+        await userEvent.clear(screen.getByLabelText('Text'));
+        await userEvent.type(screen.getByLabelText('Text'), 'L');
+        expect(screen.getByRole('button', { name: 'Sunday, column 9' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('adds a sticker where the cursor is', async () => {
+        mockApi();
+        renderPanel();
+        const input = screen.getByLabelText('Text');
+        await userEvent.type(input, 'INY{ArrowLeft}{ArrowLeft}');
+        await userEvent.click(screen.getByRole('button', { name: 'Add heart' }));
+        expect(input).toHaveValue('I♥NY');
     });
 
     it('limits the slider to spots inside the graph', async () => {

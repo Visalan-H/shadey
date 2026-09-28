@@ -1,13 +1,14 @@
-import type { Pattern, Shade } from './types';
+import type { Ink } from './design';
+import type { Shade } from './types';
 
 // The design in progress. Signing in and granting the private-repo permission both leave
 // the page for GitHub, so the draft is parked in sessionStorage and picked up on return.
 export interface Draft {
     login: string;
     year?: number;
-    source: 'text' | 'draw';
     text: string;
-    drawn: Pattern | null;
+    // The drawing on top of the text; null until the first stroke.
+    ink: Ink | null;
     offset: number | null;
     shade: Shade;
     repoName: string | null;
@@ -20,8 +21,12 @@ function sameGraph(draft: Draft, login: string, year: number | undefined) {
     return draft.login.toLowerCase() === login.toLowerCase() && draft.year === year;
 }
 
-function isPattern(value: unknown): value is Pattern {
-    return Array.isArray(value) && value.length === 7 && value.every((row) => Array.isArray(row) && row.every((c) => typeof c === 'boolean'));
+function isInk(value: unknown): value is Ink {
+    return (
+        Array.isArray(value) &&
+        value.length === 7 &&
+        value.every((row) => Array.isArray(row) && row.every((c) => c === null || typeof c === 'boolean'))
+    );
 }
 
 export function loadDraft(login: string, year: number | undefined): Draft | null {
@@ -34,8 +39,10 @@ export function loadDraft(login: string, year: number | undefined): Draft | null
         return null;
     }
     if (typeof draft?.login !== 'string' || !sameGraph(draft, login, year)) return null;
-    if (draft.drawn !== null && !isPattern(draft.drawn)) return null;
-    return draft;
+    // Drafts saved before text and drawing were combined have no ink; start them blank.
+    const ink: unknown = draft.ink ?? null;
+    if (ink !== null && !isInk(ink)) return null;
+    return { ...draft, ink };
 }
 
 export function saveDraft(draft: Draft) {
