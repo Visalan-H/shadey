@@ -51,7 +51,6 @@ const TABS = ['text', 'draw'] as const;
 
 export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const [draft, setDraft] = useState<Draft>(() => loadDraft(calendar.login, year) ?? fresh(calendar.login, year));
-    const [bestNote, setBestNote] = useState<string | null>(null);
     const [serverRepoError, setServerRepoError] = useState<string | null>(null);
     const [done, setDone] = useState<PaintResult | null>(null);
     const { data: me } = useMe();
@@ -80,11 +79,11 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const repoError = repoNameError(repoName) ?? serverRepoError;
     const hasRepoScope = Boolean(me?.scopes.includes('repo'));
 
-    let blocked: string | null = null;
-    if (width === 0) blocked = draft.source === 'text' ? 'Type some text to paint.' : 'Draw something to paint.';
-    else if (tooWide || preview.misfits > 0) blocked = 'Every pixel has to fit on the graph first.';
-    else if (repoError) blocked = 'Fix the repo name first.';
-    else if (draft.isPrivate && !hasRepoScope) blocked = 'Grant the private repo permission first, or turn off "Private repo".';
+    // The rows above already explain fit, repo name and permission problems in place.
+    const blocked = width === 0 || tooWide || preview.misfits > 0 || Boolean(repoError) || (draft.isPrivate && !hasRepoScope);
+    let note: string | null = null;
+    if (width === 0) note = draft.source === 'text' ? 'Type some text to paint.' : 'Draw something to paint.';
+    else if (!blocked && mode === 'rolling') note = 'Slides off this graph within a year. Pick a year to keep it.';
 
     const request: PaintRequest | null =
         blocked || preview.plan.length === 0
@@ -102,16 +101,8 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
 
     function findBest() {
         const best = bestOffset(calendar, placed, mode, today);
-        if (!best) {
-            setBestNote('No spot on this graph fits the whole painting.');
-            return;
-        }
-        update({ offset: best.offset });
-        setBestNote(
-            best.conflicts === 0
-                ? 'Moved to a spot with no overlapping commits.'
-                : `Moved to the spot with the least overlap (${best.conflicts} day${best.conflicts === 1 ? '' : 's'}).`,
-        );
+        // The position line reports what's left; with no spot at all, the painting is too wide.
+        if (best) update({ offset: best.offset });
     }
 
     function painted(result: PaintResult) {
@@ -122,7 +113,6 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
     function paintAnother() {
         setDone(null);
         setDraft(fresh(calendar.login, year));
-        setBestNote(null);
         setServerRepoError(null);
     }
 
@@ -138,7 +128,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                         return done && cell ? (cell.level === undefined ? undefined : { level: cell.level }) : cell;
                     }}
                 />
-                <GraphLegend>{!done && width > 0 ? 'Your real days are dimmed while you design.' : null}</GraphLegend>
+                <GraphLegend />
             </div>
 
             {done ? (
@@ -186,7 +176,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                                 autoComplete="off"
                                 className="input w-full font-mono tracking-[0.2em] uppercase sm:max-w-xs"
                             />
-                            <p className="text-sm text-muted">About 8 letters fit. Switch to Draw to touch it up by hand.</p>
+                            <p className="text-sm text-muted">About 8 letters fit.</p>
                         </Row>
                     ) : (
                         <Row label="Pixels">
@@ -199,16 +189,10 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                             calendar={calendar}
                             offset={offset}
                             maxOffset={maxOffset}
-                            onOffsetChange={(o) => {
-                                setBestNote(null);
-                                update({ offset: o });
-                            }}
+                            onOffsetChange={(o) => update({ offset: o })}
                             onFindBest={findBest}
-                            bestNote={bestNote}
-                            rolling={mode === 'rolling'}
                             misfits={preview.misfits}
                             conflictDays={preview.conflicts.length}
-                            conflictCommits={preview.conflictCommits}
                             tooWide={tooWide}
                         />
                     )}
@@ -236,7 +220,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                             className="input w-full font-mono sm:max-w-xs"
                         />
                         <p id="repo-name-help" className={`text-sm ${repoError ? 'text-danger' : 'text-muted'}`}>
-                            {repoError ?? 'A new repo is created for this painting. Delete it any time to undo.'}
+                            {repoError ?? 'Delete the repo any time to undo.'}
                         </p>
                         <label className="flex items-center gap-2 text-sm">
                             <input
@@ -248,20 +232,18 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                             Private repo
                         </label>
                         {draft.isPrivate && (
-                            <div className="flex flex-col gap-1 text-sm text-muted">
-                                <p>
-                                    A private painting only shows on your graph if "Private contributions" is turned on in your GitHub
-                                    profile settings.
-                                </p>
-                                {me && !hasRepoScope && (
-                                    <p>
-                                        GitHub needs to give Shadey permission to create private repos.{' '}
+                            <p className="text-sm text-muted">
+                                {me && !hasRepoScope ? (
+                                    <>
+                                        Needs one more permission.{' '}
                                         <a href={signInUrl(undefined, 'repo')} className="link font-medium">
                                             Grant permission on GitHub
                                         </a>
-                                    </p>
+                                    </>
+                                ) : (
+                                    'Shows only if "Private contributions" is on in your GitHub profile.'
                                 )}
-                            </div>
+                            </p>
                         )}
                     </Row>
 
@@ -270,7 +252,7 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                             graphLogin={calendar.login}
                             request={request}
                             blocked={blocked}
-                            totalCommits={preview.calibration.totalCommits}
+                            note={note}
                             onPainted={painted}
                             onShowMine={onShowMine}
                             onRepoNameError={setServerRepoError}

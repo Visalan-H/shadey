@@ -8,9 +8,9 @@ interface Props {
     graphLogin: string;
     // null when there is nothing valid to paint yet.
     request: PaintRequest | null;
-    // Why painting is blocked, shown next to the disabled button.
-    blocked: string | null;
-    totalCommits: number;
+    blocked: boolean;
+    // Shown next to the button: why it's disabled, or what to know before painting.
+    note: string | null;
     onPainted: (result: PaintResult) => void;
     onShowMine: (login: string) => void;
     onRepoNameError: (message: string) => void;
@@ -21,7 +21,7 @@ const linkClass = 'font-medium underline underline-offset-2';
 // Note on the left, button on the right; the button goes on top when they wrap on phones.
 const rowClass = 'flex flex-wrap-reverse items-center justify-between gap-3';
 
-export function PaintAction({ graphLogin, request, blocked, totalCommits, onPainted, onShowMine, onRepoNameError }: Props) {
+export function PaintAction({ graphLogin, request, blocked, note, onPainted, onShowMine, onRepoNameError }: Props) {
     const { data: me, isPending: meLoading } = useMe();
     const paint = usePaint();
     const queryClient = useQueryClient();
@@ -42,9 +42,7 @@ export function PaintAction({ graphLogin, request, blocked, totalCommits, onPain
     if (me.login.toLowerCase() !== graphLogin.toLowerCase()) {
         return (
             <div className={rowClass}>
-                <p className="text-sm text-muted">
-                    This is @{graphLogin}'s graph. You can only paint your own, signed in as @{me.login}.
-                </p>
+                <p className="text-sm text-muted">You can only paint your own graph.</p>
                 <button type="button" onClick={() => onShowMine(me.login)} className={buttonClass}>
                     Design on my graph
                 </button>
@@ -66,17 +64,12 @@ export function PaintAction({ graphLogin, request, blocked, totalCommits, onPain
         });
     }
 
-    const disabled = !request || Boolean(blocked) || paint.isPending;
-    let note: string | null = blocked;
-    if (paint.isPending) note = 'Creating the repo and pushing commits. This can take up to a minute.';
-    else if (!note && totalCommits > 0) {
-        note = `Creates a new repo with ${totalCommits.toLocaleString()} empty commit${totalCommits === 1 ? '' : 's'}.`;
-    }
+    const disabled = !request || blocked || paint.isPending;
     return (
         <div className="flex flex-col gap-3">
             <div className={rowClass}>
                 <p className="text-sm text-muted" aria-live="polite">
-                    {note}
+                    {paint.isPending ? 'This can take up to a minute.' : note}
                 </p>
                 <button type="button" onClick={submit} disabled={disabled} className={buttonClass}>
                     {paint.isPending ? 'Painting…' : 'Paint'}

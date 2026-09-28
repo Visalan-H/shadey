@@ -75,12 +75,12 @@ describe('DesignPanel', () => {
         mockApi();
         renderPanel(calendar((_d, week) => (week >= 20 && week <= 32 ? 3 : 0)));
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
-        expect(screen.getByText(/of your commits on .* overlap here/)).toBeInTheDocument();
+        expect(screen.getByText(/Overlaps your commits on .* days/)).toBeInTheDocument();
         expect(document.querySelectorAll('[data-highlight="conflict"]').length).toBeGreaterThan(0);
 
         await userEvent.click(screen.getByRole('button', { name: 'Find best spot' }));
-        expect(screen.getByText('Moved to a spot with no overlapping commits.')).toBeInTheDocument();
-        expect(screen.queryByText(/overlap here/)).not.toBeInTheDocument();
+        expect(screen.getByText(/Starts the week of/)).toBeInTheDocument();
+        expect(screen.queryByText(/Overlaps your commits/)).not.toBeInTheDocument();
     });
 
     it('paints and shows the done screen', async () => {
@@ -144,7 +144,6 @@ describe('DesignPanel', () => {
         renderPanel();
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
         await userEvent.click(screen.getByLabelText('Private repo'));
-        expect(screen.getByText(/Private contributions/)).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Grant permission on GitHub' })).toHaveAttribute('href', expect.stringContaining('scope=repo'));
         expect(await screen.findByRole('button', { name: 'Paint' })).toBeDisabled();
     });
@@ -200,7 +199,7 @@ describe('DesignPanel', () => {
         mockApi();
         renderPanel(calendar(), { rolling: true });
         await userEvent.type(screen.getByLabelText('Text'), 'Hi');
-        expect(screen.getByText(/slides left every week/)).toBeInTheDocument();
+        expect(screen.getByText(/Slides off this graph within a year/)).toBeInTheDocument();
     });
 
     it('calibrates the commit count to the chosen shade', async () => {

@@ -7,11 +7,8 @@ interface Props {
     maxOffset: number;
     onOffsetChange: (offset: number) => void;
     onFindBest: () => void;
-    bestNote: string | null;
-    rolling: boolean;
     misfits: number;
     conflictDays: number;
-    conflictCommits: number;
     tooWide: boolean;
 }
 
@@ -26,8 +23,17 @@ function weekLabel(calendar: Calendar, week: number) {
 
 const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
 
+// One line under the slider: the worst problem, or where the painting starts.
+function status({ calendar, offset, misfits, conflictDays, tooWide }: Props): { text: string; className: string } {
+    if (tooWide) return { text: 'Too wide for the graph. Shorten it.', className: 'text-danger' };
+    if (misfits > 0) return { text: `${plural(misfits, 'pixel')} off the graph, outlined in red.`, className: 'text-danger' };
+    if (conflictDays > 0) return { text: `Overlaps your commits on ${plural(conflictDays, 'day')}, outlined in amber.`, className: 'text-attention' };
+    return { text: `Starts the week of ${weekLabel(calendar, offset)}.`, className: 'text-muted' };
+}
+
 export function PlacementControls(props: Props) {
-    const { calendar, offset, maxOffset, rolling, misfits, conflictDays, conflictCommits, tooWide } = props;
+    const { calendar, offset, maxOffset } = props;
+    const line = status(props);
 
     return (
         <Row label={<label htmlFor="offset">Position</label>}>
@@ -44,41 +50,13 @@ export function PlacementControls(props: Props) {
                     aria-valuetext={`Starts the week of ${weekLabel(calendar, offset)}`}
                     className="min-w-0 flex-1 basis-40 accent-accent"
                 />
-                <button
-                    type="button"
-                    onClick={props.onFindBest}
-                    className="btn"
-                >
+                <button type="button" onClick={props.onFindBest} className="btn">
                     Find best spot
                 </button>
             </div>
-            <p className="text-sm text-muted">Starts the week of {weekLabel(calendar, offset)}.</p>
-            <div className="flex flex-col gap-1 text-sm" aria-live="polite">
-                {props.bestNote && <p>{props.bestNote}</p>}
-                {tooWide ? (
-                    <p className="text-danger">This painting is wider than the graph. Shorten the text or remove columns.</p>
-                ) : (
-                    misfits > 0 && (
-                        <p className="text-danger">
-                            {plural(misfits, 'pixel')} {misfits === 1 ? 'falls' : 'fall'} outside the graph or on a future day (outlined in
-                            red). Move the painting so every pixel fits.
-                        </p>
-                    )
-                )}
-                {conflictDays > 0 && (
-                    <p className="text-attention">
-                        {conflictCommits.toLocaleString()} of your commit{conflictCommits === 1 ? '' : 's'} on {plural(conflictDays, 'day')}{' '}
-                        {conflictCommits === 1 ? 'overlaps' : 'overlap'} here (outlined in amber). They will show as stray green inside the
-                        painting. You can still paint.
-                    </p>
-                )}
-                {rolling && (
-                    <p className="text-muted">
-                        On the last-12-months graph the painting slides left every week and is gone in about a year. Pick a past year
-                        above to keep it for good.
-                    </p>
-                )}
-            </div>
+            <p className={`text-sm ${line.className}`} aria-live="polite">
+                {line.text}
+            </p>
         </Row>
     );
 }
