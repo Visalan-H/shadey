@@ -193,9 +193,12 @@ function PaintingRow({ painting: p }: { painting: PaintingSummary }) {
                         <button type="button" onClick={() => checkShades.mutate(p.shareId)} disabled={checkShades.isPending} className={buttonClass}>
                             {checkShades.isPending ? 'Checking…' : 'Check shades'}
                         </button>
-                        <a href={deleteForMeUrl(p.shareId)} className={buttonClass}>
-                            Delete for me
-                        </a>
+                        {/* A form, not a link: the server only starts this from a POST so other sites can't trigger it. */}
+                        <form method="post" action={deleteForMeUrl(p.shareId)} className="contents">
+                            <button type="submit" className={buttonClass}>
+                                Delete for me
+                            </button>
+                        </form>
                         <button type="button" onClick={() => setSelfDelete((s) => !s)} aria-expanded={selfDelete} className={buttonClass}>
                             Delete it myself
                         </button>

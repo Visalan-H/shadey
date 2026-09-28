@@ -140,7 +140,7 @@ describe('"Delete for me"', () => {
     }
 
     async function start(cookie: string, shareId: string) {
-        const res = await request(app).get('/api/auth/delete').query({ painting: shareId }).set('Cookie', cookie);
+        const res = await request(app).post('/api/auth/delete').query({ painting: shareId }).set('Cookie', cookie).set('Sec-Fetch-Site', 'same-origin');
         const location = new URL(res.headers.location ?? '', 'https://shadey.test');
         return { res, location, state: location.searchParams.get('state') ?? '', deleteCookie: cookiePair(setCookie(res.headers, 'gp_delete')) };
     }
@@ -246,5 +246,20 @@ describe('"Delete for me"', () => {
         const p = await makePainting(other._id);
         const { res } = await start(cookie, p.shareId);
         expect(res.headers.location).toBe(`https://shadey.test/me?delete_error=${p.shareId}`);
+    });
+
+    it('refuses a request sent from another site', async () => {
+        const { user, cookie } = await makeUser();
+        const p = await makePainting(user._id);
+        const res = await request(app).post('/api/auth/delete').query({ painting: p.shareId }).set('Cookie', cookie).set('Sec-Fetch-Site', 'cross-site');
+        expect(res.status).toBe(403);
+        expect(res.headers.location).toBeUndefined();
+    });
+
+    it('no longer starts from a plain link', async () => {
+        const { user, cookie } = await makeUser();
+        const p = await makePainting(user._id);
+        const res = await request(app).get('/api/auth/delete').query({ painting: p.shareId }).set('Cookie', cookie);
+        expect(res.status).toBe(404);
     });
 });

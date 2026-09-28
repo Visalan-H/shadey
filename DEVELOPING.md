@@ -33,4 +33,4 @@ The images in `.github/images/` are screenshots of the running app. `hero.png` i
 
 ## Reports and takedowns
 
-Share pages have a "Report this painting" link. To review reports, set `ADMIN_GITHUB_IDS` in the backend's environment to your GitHub account id, or several separated by commas. Find yours as `id` at `https://api.github.com/users/<your-login>`. It never changes, unlike a login someone else could take after a rename. Sign in as one of them and open `/admin` to see reported paintings. "Take down" hides the share page and its preview image. "Put back" restores them, and neither touches the owner's repo.
+Share pages have a "Report this painting" link. To review reports, set `ADMIN_GITHUB_IDS` in the backend's environment to your GitHub account id, or several separated by commas. Find yours as `id` at `https://api.github.com/users/<your-login>`. It never changes, unlike a login someone else could take after a rename. Sign in as one of them and open `/admin` to see reported paintings. "Take down" hides the share page right away and its preview image within an hour, once the cached copy expires. "Put back" restores them, and neither touches the owner's repo.
