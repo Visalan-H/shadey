@@ -37,22 +37,14 @@ export function ShadePicker({ shade, onChange, calibration }: Props) {
                 ))}
             </div>
             {calibration && calibration.dates.length > 0 && (
-                <div className="flex flex-col gap-1 text-sm" aria-live="polite">
-                    <p data-testid="commit-estimate" className="text-muted">
-                        About {plural(calibration.totalCommits, 'commit')}, {calibration.perCell.toLocaleString()} per day
-                    </p>
-                    {(!calibration.exact || calibration.capped) && (
-                        <p className="text-attention">
-                            Some painted days may not land exactly on this shade, because GitHub shades days relative to your
-                            busiest ones. It will still be close.
-                        </p>
-                    )}
-                    {calibration.realDaysShifted > 0 && (
-                        <p className="text-muted">
-                            {calibration.realDaysShifted.toLocaleString()} of your real days will look a shade lighter.
-                        </p>
-                    )}
-                </div>
+                <p className="text-sm text-muted" aria-live="polite">
+                    <span data-testid="commit-estimate">
+                        About {plural(calibration.totalCommits, 'commit')}, {calibration.perCell.toLocaleString()} per day.
+                    </span>
+                    {/* GitHub shades each day relative to your busiest ones, so exact isn't always possible. */}
+                    {(!calibration.exact || calibration.capped) && ' Some days may land a shade off.'}
+                    {calibration.realDaysShifted > 0 && ` ${plural(calibration.realDaysShifted, 'real day')} will look lighter.`}
+                </p>
             )}
         </Row>
     );
