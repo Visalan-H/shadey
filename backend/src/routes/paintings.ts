@@ -136,7 +136,10 @@ export function createPaintingsRouter(deps: PaintingsDeps = {}) {
             return;
         }
 
-        const quota = await consumePaint(user.id);
+        // By GitHub account, not our user id: deleting the account and signing in again makes a
+        // new user, and that mustn't reset the daily limit.
+        const quotaKey = String(user.githubId);
+        const quota = await consumePaint(quotaKey);
         if (!quota.ok) {
             res.status(429).json({
                 error: 'You have painted the maximum number of times today. Please try again later.',
@@ -164,7 +167,7 @@ export function createPaintingsRouter(deps: PaintingsDeps = {}) {
                 pushRetryDelaysMs: deps.pushRetryDelaysMs,
             });
         } catch (err) {
-            await refundPaint(user.id).catch((e: unknown) => console.error('Refund failed', e));
+            await refundPaint(quotaKey).catch((e: unknown) => console.error('Refund failed', e));
             const failure = paintFailure(err);
             res.status(failure.status).json(failure.body);
             return;

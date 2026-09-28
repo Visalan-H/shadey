@@ -228,6 +228,16 @@ describe('POST /api/paintings', () => {
         expect(res.status).toBe(429);
         expect(res.body.retryAfterSeconds).toBeGreaterThan(0);
     });
+
+    it('keeps the daily limit when the account is deleted and made again', async () => {
+        mockGitHub();
+        const cookie = await signIn();
+        for (let i = 0; i < 5; i++) expect((await post(cookie, body())).status).toBe(201);
+        const gone = await User.findOneAndDelete({});
+        const again = await User.create({ githubId: gone!.githubId, login: 'octo', name: null, avatarUrl: '', tokenEnc: encrypt(TOKEN), scopes: gone!.scopes });
+        const res = await post(`gp_session=${await createSession(again.id)}`, body());
+        expect(res.status).toBe(429);
+    });
 });
 
 describe('GET /api/paintings/:shareId', () => {
