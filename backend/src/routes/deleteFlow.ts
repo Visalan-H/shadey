@@ -59,7 +59,16 @@ async function revokeToken(accessToken: string) {
     }
 }
 
-router.get('/api/auth/delete', requireUser, async (req, res) => {
+// A POST from the site's own form. As a GET, any site could link here: Lax cookies ride along on
+// cross-site links, and GitHub skips its consent screen once delete_repo was granted before, so
+// one click on someone else's page could delete a repo. Browsers without Sec-Fetch-Site still
+// leave the session cookie off cross-site POSTs.
+router.post('/api/auth/delete', requireUser, async (req, res) => {
+    const site = req.headers['sec-fetch-site'];
+    if (site !== undefined && site !== 'same-origin') {
+        res.status(403).json({ error: 'Start this from My paintings' });
+        return;
+    }
     const shareId = req.query.painting;
     if (typeof shareId !== 'string' || !shareId) {
         res.status(400).json({ error: 'Missing painting' });
