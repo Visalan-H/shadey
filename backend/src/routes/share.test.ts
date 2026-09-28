@@ -110,6 +110,13 @@ describe('GET /og/:shareId.png', () => {
         expect((await request(app).get('/og/abc123.png')).status).toBe(404);
         expect((await request(app).get('/og/nope.png')).status).toBe(404);
     });
+
+    it('sends any query string to the plain URL without rendering', async () => {
+        const res = await request(app).get('/og/abc123.png?x=1&y=2');
+        expect(res.status).toBe(301);
+        expect(res.headers.location).toBe('/og/abc123.png');
+        expect(res.headers['content-type']).not.toBe('image/png');
+    });
 });
 
 describe('GET /p/:shareId', () => {
