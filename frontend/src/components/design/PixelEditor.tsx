@@ -15,6 +15,18 @@ interface Stroke {
     pointerId: number;
     value: boolean;
     pattern: Pattern;
+    // The pattern before the stroke, restored if a second finger turns it into a scroll.
+    before: Pattern;
+}
+
+interface Point {
+    x: number;
+    y: number;
+}
+
+function midpoint(points: Iterable<Point>): Point {
+    const all = [...points];
+    return { x: all.reduce((n, p) => n + p.x, 0) / all.length, y: all.reduce((n, p) => n + p.y, 0) / all.length };
 }
 
 function cellAt(target: EventTarget | null, x: number, y: number): { row: number; col: number } | null {
@@ -31,6 +43,10 @@ export function PixelEditor({ pattern, onChange }: Props) {
     const [mode, setMode] = useState<'paint' | 'erase'>('paint');
     const [history, setHistory] = useState<Pattern[]>([]);
     const stroke = useRef<Stroke | null>(null);
+    // One finger draws; two fingers scroll the grid and the page, like drawing apps.
+    const pointers = useRef(new Map<number, Point>());
+    const pan = useRef<Point | null>(null);
+    const scroller = useRef<HTMLDivElement>(null);
     const width = patternWidth(pattern);
 
     function remember(previous: Pattern) {
@@ -45,6 +61,19 @@ export function PixelEditor({ pattern, onChange }: Props) {
 
     function onPointerDown(e: PointerEvent<HTMLDivElement>) {
         if (e.button !== undefined && e.button > 0) return;
+        pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.current.size > 1) {
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            const current = stroke.current;
+            if (current) {
+                // The first finger landed a moment earlier and already drew; take that back.
+                stroke.current = null;
+                setHistory((h) => h.slice(0, -1));
+                onChange(current.before);
+            }
+            pan.current = midpoint(pointers.current.values());
+            return;
+        }
         const cell = cellAt(e.target, e.clientX, e.clientY);
         if (!cell) return;
         e.preventDefault();
@@ -53,12 +82,20 @@ export function PixelEditor({ pattern, onChange }: Props) {
         // lit cell erases; erase mode always clears.
         const value = mode === 'erase' ? false : !pattern[cell.row]?.[cell.col];
         const next = togglePixel(pattern, cell.row, cell.col, value);
-        stroke.current = { pointerId: e.pointerId, value, pattern: next };
+        stroke.current = { pointerId: e.pointerId, value, pattern: next, before: pattern };
         remember(pattern);
         if (next !== pattern) onChange(next);
     }
 
     function onPointerMove(e: PointerEvent<HTMLDivElement>) {
+        if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pan.current) {
+            const mid = midpoint(pointers.current.values());
+            scroller.current?.scrollBy(pan.current.x - mid.x, 0);
+            window.scrollBy(0, pan.current.y - mid.y);
+            pan.current = mid;
+            return;
+        }
         const current = stroke.current;
         if (!current || current.pointerId !== e.pointerId) return;
         const cell = cellAt(e.target, e.clientX, e.clientY);
@@ -70,8 +107,10 @@ export function PixelEditor({ pattern, onChange }: Props) {
         onChange(next);
     }
 
-    function endStroke() {
-        stroke.current = null;
+    function endPointer(e: PointerEvent<HTMLDivElement>) {
+        pointers.current.delete(e.pointerId);
+        if (pointers.current.size < 2) pan.current = null;
+        if (stroke.current?.pointerId === e.pointerId) stroke.current = null;
     }
 
     // Keyboard activation (Enter/Space) arrives as a click with detail 0; pointer clicks are
@@ -98,49 +137,30 @@ export function PixelEditor({ pattern, onChange }: Props) {
         change(pattern.map((row) => row.slice(0, -1)));
     }
 
-    const toolClass =
-        'btn';
-    const pressedClass = 'bg-canvas font-semibold hover:bg-canvas';
+    // Same look as the Text/Draw switch above, so both read as "pick one".
+    const toolClass = (on: boolean) =>
+        `rounded-[5px] border px-3 py-[3px] text-sm ${on ? 'border-line bg-canvas font-semibold' : 'border-transparent hover:text-fg text-muted'}`;
+    const stepClass = 'btn w-8 px-0';
 
     return (
         <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Pixel editor tools">
-                <div className="flex">
-                    <button
-                        type="button"
-                        aria-pressed={mode === 'paint'}
-                        onClick={() => setMode('paint')}
-                        className={`${toolClass} rounded-r-none ${mode === 'paint' ? pressedClass : 'text-muted'}`}
-                    >
+                <div role="group" aria-label="Tool" className="flex rounded-md bg-btn-hover p-0.5">
+                    <button type="button" aria-pressed={mode === 'paint'} onClick={() => setMode('paint')} className={toolClass(mode === 'paint')}>
                         Paint
                     </button>
-                    <button
-                        type="button"
-                        aria-pressed={mode === 'erase'}
-                        onClick={() => setMode('erase')}
-                        className={`${toolClass} -ml-px rounded-l-none ${mode === 'erase' ? pressedClass : 'text-muted'}`}
-                    >
+                    <button type="button" aria-pressed={mode === 'erase'} onClick={() => setMode('erase')} className={toolClass(mode === 'erase')}>
                         Erase
                     </button>
                 </div>
-                <button type="button" onClick={undo} disabled={history.length === 0} className={toolClass}>
+                <button type="button" onClick={undo} disabled={history.length === 0} className="btn">
                     Undo
                 </button>
-                <button type="button" onClick={() => change(emptyPattern(width))} disabled={litCount(pattern) === 0} className={toolClass}>
+                <button type="button" onClick={() => change(emptyPattern(width))} disabled={litCount(pattern) === 0} className="btn">
                     Clear
                 </button>
-                <span className="ml-auto flex items-center gap-1 text-sm text-muted">
-                    Columns
-                    <button type="button" onClick={removeColumn} disabled={width <= 1} className={toolClass} aria-label="Remove column">
-                        −
-                    </button>
-                    <span className="w-6 text-center tabular-nums">{width}</span>
-                    <button type="button" onClick={addColumn} disabled={width >= MAX_COLUMNS} className={toolClass} aria-label="Add column">
-                        +
-                    </button>
-                </span>
             </div>
-            <div className="max-w-full overflow-x-auto p-1">
+            <div ref={scroller} className="max-w-full overflow-x-auto p-1">
                 <div
                     role="group"
                     aria-label="Pixel editor"
@@ -148,9 +168,9 @@ export function PixelEditor({ pattern, onChange }: Props) {
                     style={{ gridTemplateColumns: `repeat(${width}, 1.5rem)`, gridTemplateRows: 'repeat(7, 1.5rem)', touchAction: 'none' }}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
-                    onPointerUp={endStroke}
-                    onPointerCancel={endStroke}
-                    onLostPointerCapture={endStroke}
+                    onPointerUp={endPointer}
+                    onPointerCancel={endPointer}
+                    onLostPointerCapture={endPointer}
                 >
                     {pattern.map((row, r) =>
                         row.map((on, c) => (
@@ -171,6 +191,20 @@ export function PixelEditor({ pattern, onChange }: Props) {
                         )),
                     )}
                 </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                    <button type="button" onClick={removeColumn} disabled={width <= 1} className={stepClass} aria-label="Remove column">
+                        −
+                    </button>
+                    <span className="tabular-nums">
+                        {width} column{width === 1 ? '' : 's'}
+                    </span>
+                    <button type="button" onClick={addColumn} disabled={width >= MAX_COLUMNS} className={stepClass} aria-label="Add column">
+                        +
+                    </button>
+                </div>
+                <p className="hidden text-sm text-muted pointer-coarse:block">Two fingers to scroll</p>
             </div>
         </div>
     );
