@@ -57,7 +57,7 @@ export function ShareButtons({ shareId, text, message, captureRef }: Props) {
             const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: background });
             const a = document.createElement('a');
             a.href = dataUrl;
-            a.download = `graph-painting-${shareId}.png`;
+            a.download = `shadey-${shareId}.png`;
             a.click();
             setSaving(null);
         } catch {

@@ -135,7 +135,9 @@ function metaTags(shareId: string, painting: SharedPainting) {
 }
 
 function injectTags(html: string, title: string, tags: string) {
-    const titled = html.replace(/<title>[\s\S]*?<\/title>/, '');
+    let titled = html.replace(/<title>[\s\S]*?<\/title>/, '');
+    // Drop the site-wide preview tags so crawlers pick up this painting's image instead.
+    if (tags) titled = titled.replace(/\s*<meta (?:property="og:|name="twitter:)[^>]*>/g, '');
     // Use a function so "$" in user text isn't read as a replacement pattern.
     return titled.replace('</head>', () => `<title>${title}</title>\n${tags}\n</head>`);
 }

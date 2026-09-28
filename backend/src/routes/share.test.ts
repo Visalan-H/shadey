@@ -15,7 +15,7 @@ vi.mock('../db.js', () => ({ connectDb: async () => undefined }));
 setAuthEnv();
 useTestDb();
 
-const SHELL = '<!doctype html><html><head><meta charset="UTF-8" /><title>Shadey</title></head><body><div id="root"></div></body></html>';
+const SHELL = '<!doctype html><html><head><meta charset="UTF-8" /><title>Shadey</title><meta property="og:image" content="https://shadey.test/og.png" /><meta name="twitter:card" content="summary_large_image" /></head><body><div id="root"></div></body></html>';
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 let shellRequests = 0;
@@ -123,6 +123,8 @@ describe('GET /p/:shareId', () => {
         expect(res.text).not.toContain('<title>Shadey</title>');
         expect(res.text).toContain('<meta property="og:image" content="https://shadey.test/og/abc123.png" />');
         expect(res.text).toContain('<meta property="og:url" content="https://shadey.test/p/abc123" />');
+        expect(res.text).not.toContain('https://shadey.test/og.png');
+        expect(res.text.match(/twitter:card/g)).toHaveLength(1);
         expect(res.text).toContain('<meta name="twitter:card" content="summary_large_image" />');
     });
 
@@ -146,7 +148,8 @@ describe('GET /p/:shareId', () => {
         const res = await request(app).get('/p/abc123');
         expect(res.status).toBe(200);
         expect(res.text).toContain('<div id="root"></div>');
-        expect(res.text).not.toContain('og:image');
+        // The site's own preview tags stay.
+        expect(res.text).toContain('content="https://shadey.test/og.png"');
     });
 
     it('falls back to a minimal page when the shell cannot be fetched', async () => {
