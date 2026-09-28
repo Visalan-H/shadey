@@ -134,13 +134,16 @@ describe('DELETE /api/auth/me', () => {
         await report('abc', {}, { 'x-real-ip': '1.1.1.1' });
         const { user: other } = await signIn('mona');
         await makePainting(other._id, 'keep', 'mona');
+        // Filed by octo about someone else's painting: goes too. Mona's own report stays.
+        await report('keep', { reason: 'mine' }, { Cookie: cookie });
+        await report('keep', { reason: 'theirs' }, { 'x-real-ip': '3.3.3.3' });
 
         const res = await request(app).delete('/api/auth/me').set('Cookie', cookie);
         expect(res.status).toBe(204);
         expect(String(res.headers['set-cookie'])).toMatch(/gp_session=;/);
         expect(await User.exists({ _id: user._id })).toBeNull();
         expect(await PaintingModel.find().distinct('shareId')).toEqual(['keep']);
-        expect(await ReportModel.countDocuments()).toBe(0);
+        expect(await ReportModel.find().distinct('reason')).toEqual(['theirs']);
         expect(revoked).toEqual(['gho_octo']);
     });
 

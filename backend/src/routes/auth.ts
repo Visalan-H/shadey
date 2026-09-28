@@ -96,7 +96,8 @@ router.delete('/me', requireUser, async (req, res) => {
     const token = getUserToken(user);
     await connectDb();
     const shareIds = await PaintingModel.distinct('shareId', { userId: user._id });
-    await ReportModel.deleteMany({ shareId: { $in: shareIds } });
+    // Reports about their paintings, and the ones they filed while signed in.
+    await ReportModel.deleteMany({ $or: [{ shareId: { $in: shareIds } }, { reporterKey: `user:${user.id}` }] });
     await PaintingModel.deleteMany({ userId: user._id });
     await forgetCalendars(user.login).catch((e: unknown) => console.error('Clearing cached graphs failed', e));
     await user.deleteOne();
