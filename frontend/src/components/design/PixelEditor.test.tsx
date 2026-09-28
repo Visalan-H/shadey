@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { emptyPattern } from '../../lib/design';
 import type { Pattern } from '../../lib/types';
 import { PixelEditor } from './PixelEditor';
@@ -36,6 +36,27 @@ describe('PixelEditor', () => {
         fireEvent.pointerUp(grid, { pointerId: 1 });
         fireEvent.pointerMove(cell('Wednesday', 4), { pointerId: 1 });
         expect(lit()).toHaveLength(3);
+    });
+
+    it('scrolls instead of drawing when a second finger lands', () => {
+        render(<Harness />);
+        const grid = screen.getByRole('group', { name: 'Pixel editor' });
+        const scroller = grid.parentElement!;
+        scroller.scrollBy = vi.fn();
+        const pageScroll = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
+
+        fireEvent.pointerDown(cell('Sunday', 1), { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+        expect(lit()).toHaveLength(1);
+        fireEvent.pointerDown(cell('Sunday', 3), { pointerId: 2, button: 0, clientX: 140, clientY: 100 });
+        // The first finger's pixel is taken back and leaves nothing to undo.
+        expect(lit()).toHaveLength(0);
+        expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
+
+        fireEvent.pointerMove(cell('Monday', 1), { pointerId: 1, clientX: 60, clientY: 90 });
+        expect(scroller.scrollBy).toHaveBeenCalledWith(20, 0);
+        expect(pageScroll).toHaveBeenCalledWith(0, 5);
+        expect(lit()).toHaveLength(0);
+        pageScroll.mockRestore();
     });
 
     it('erases in erase mode, and undo brings the stroke back', async () => {
