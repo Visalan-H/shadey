@@ -62,6 +62,14 @@ function appUrl() {
 }
 
 router.get('/og/:shareId.png', async (req, res) => {
+    // The CDN caches each distinct URL on its own, so /og/x.png?1, ?2, ... would each force a
+    // fresh render. Send any query string to the one canonical URL instead of rendering.
+    const query = req.originalUrl.indexOf('?');
+    if (query !== -1) {
+        res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+        res.redirect(301, req.originalUrl.slice(0, query));
+        return;
+    }
     const painting = await findPainting(req.params.shareId);
     if (!painting) {
         res.status(404).type('text/plain').send('Not found');
