@@ -90,7 +90,7 @@ describe('shareWeeks', () => {
 });
 
 describe('GET /og/:shareId.png', () => {
-    it('renders the share image with long caching', async () => {
+    it('renders the share image, cached for an hour so takedowns clear quickly', async () => {
         await makePainting();
         const res = await request(app).get('/og/abc123.png').buffer(true).parse((r, cb) => {
             const chunks: Buffer[] = [];
@@ -99,7 +99,7 @@ describe('GET /og/:shareId.png', () => {
         });
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toBe('image/png');
-        expect(res.headers['cache-control']).toContain('s-maxage=');
+        expect(res.headers['cache-control']).toBe('public, max-age=3600, s-maxage=3600');
         const png = res.body as Buffer;
         expect(png.subarray(0, 8).equals(PNG_SIGNATURE)).toBe(true);
         expect({ width: png.readUInt32BE(16), height: png.readUInt32BE(20) }).toEqual({ width: 1200, height: 630 });

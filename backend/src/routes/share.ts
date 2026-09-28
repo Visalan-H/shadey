@@ -73,10 +73,11 @@ router.get('/og/:shareId.png', async (req, res) => {
         weeks: shareWeeks(painting),
         domain: new URL(appUrl()).host,
     });
-    // A painting never changes once made (deleting it just stops the page from linking here).
+    // An hour, not longer: taking a painting down, deleting it or deleting the account has to
+    // remove the image too, and a cached copy keeps showing until it expires.
     res.set({
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400, s-maxage=31536000, immutable',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
     });
     res.send(png);
 });
