@@ -86,7 +86,7 @@ router.get('/me', async (req, res) => {
         return;
     }
     const { login, name, avatarUrl, githubId, scopes } = user;
-    res.json({ user: { login, name, avatarUrl, githubId, scopes, ...(isAdmin(login) ? { admin: true } : {}) } });
+    res.json({ user: { login, name, avatarUrl, githubId, scopes, ...(isAdmin(githubId) ? { admin: true } : {}) } });
 });
 
 // Deletes everything Shadey stores about the user and removes the app from their GitHub

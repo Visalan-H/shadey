@@ -3,7 +3,7 @@ import { sharePath } from '../components/design/PaintDone';
 import { useAdminAction, useReports, type ReportedPainting } from '../lib/admin';
 import { useMe } from '../lib/auth';
 
-// Reported share pages, for the logins in the backend's ADMIN_LOGINS.
+// Reported share pages, for the accounts in the backend's ADMIN_GITHUB_IDS.
 export function AdminPage() {
     const { data: me, isPending } = useMe();
     const reports = useReports(Boolean(me?.admin));

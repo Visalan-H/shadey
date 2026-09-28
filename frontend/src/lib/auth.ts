@@ -7,7 +7,7 @@ export interface Me {
     avatarUrl: string;
     githubId: number;
     scopes: string[];
-    // Set only for logins listed in the backend's ADMIN_LOGINS.
+    // Set only for accounts listed in the backend's ADMIN_GITHUB_IDS.
     admin?: boolean;
 }
 

@@ -35,18 +35,19 @@ export function getUserToken(user: UserDoc): string {
     return decrypt(user.tokenEnc);
 }
 
-export function isAdmin(login: string): boolean {
-    const admins = (env().ADMIN_LOGINS ?? '')
+// By GitHub account id, not login: a renamed login can be registered by someone else.
+export function isAdmin(githubId: number): boolean {
+    const admins = (env().ADMIN_GITHUB_IDS ?? '')
         .split(',')
-        .map((s) => s.trim().toLowerCase())
+        .map((s) => s.trim())
         .filter(Boolean);
-    return admins.includes(login.toLowerCase());
+    return admins.includes(String(githubId));
 }
 
 export const requireAdmin: RequestHandler = async (req, res, next) => {
     const user = await loadSessionUser(req);
     // Same answer as a missing route, so the admin API doesn't advertise itself.
-    if (!user || !isAdmin(user.login)) {
+    if (!user || !isAdmin(user.githubId)) {
         res.status(404).json({ error: 'Not found' });
         return;
     }
