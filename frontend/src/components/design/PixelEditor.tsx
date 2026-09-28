@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import { emptyPattern, litCount, patternWidth, togglePixel } from '../../lib/design';
+import { composeInk, hasInk, resizeInk, setInk, type Ink } from '../../lib/design';
 import type { Pattern } from '../../lib/types';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -7,16 +7,21 @@ const MAX_COLUMNS = 53;
 const HISTORY_LIMIT = 100;
 
 interface Props {
-    pattern: Pattern;
-    onChange: (pattern: Pattern) => void;
+    // The text underneath. The editor only changes the drawing on top of it.
+    base: Pattern;
+    ink: Ink | null;
+    columns: number;
+    // Removing columns stops here so the text never gets cut off.
+    minColumns: number;
+    onChange: (ink: Ink) => void;
 }
 
 interface Stroke {
     pointerId: number;
     value: boolean;
-    pattern: Pattern;
-    // The pattern before the stroke, restored if a second finger turns it into a scroll.
-    before: Pattern;
+    ink: Ink;
+    // The drawing before the stroke, restored if a second finger turns it into a scroll.
+    before: Ink;
 }
 
 interface Point {
@@ -39,23 +44,25 @@ function cellAt(target: EventTarget | null, x: number, y: number): { row: number
     return Number.isInteger(row) && Number.isInteger(col) ? { row, col } : null;
 }
 
-export function PixelEditor({ pattern, onChange }: Props) {
+export function PixelEditor({ base, ink: rawInk, columns, minColumns, onChange }: Props) {
     const [mode, setMode] = useState<'paint' | 'erase'>('paint');
-    const [history, setHistory] = useState<Pattern[]>([]);
+    const [history, setHistory] = useState<Ink[]>([]);
     const stroke = useRef<Stroke | null>(null);
     // One finger draws; two fingers scroll the grid and the page, like drawing apps.
     const pointers = useRef(new Map<number, Point>());
     const pan = useRef<Point | null>(null);
     const scroller = useRef<HTMLDivElement>(null);
-    const width = patternWidth(pattern);
+    const ink = resizeInk(rawInk, columns);
+    const pattern = composeInk(base, ink);
+    const width = columns;
 
-    function remember(previous: Pattern) {
+    function remember(previous: Ink) {
         setHistory((h) => [...h.slice(-(HISTORY_LIMIT - 1)), previous]);
     }
 
-    function change(next: Pattern) {
-        if (next === pattern) return;
-        remember(pattern);
+    function change(next: Ink) {
+        if (next === ink) return;
+        remember(ink);
         onChange(next);
     }
 
@@ -81,10 +88,10 @@ export function PixelEditor({ pattern, onChange }: Props) {
         // Paint mode toggles the first cell and keeps drawing that value, so dragging from a
         // lit cell erases; erase mode always clears.
         const value = mode === 'erase' ? false : !pattern[cell.row]?.[cell.col];
-        const next = togglePixel(pattern, cell.row, cell.col, value);
-        stroke.current = { pointerId: e.pointerId, value, pattern: next, before: pattern };
-        remember(pattern);
-        if (next !== pattern) onChange(next);
+        const next = setInk(ink, base, cell.row, cell.col, value);
+        stroke.current = { pointerId: e.pointerId, value, ink: next, before: ink };
+        remember(ink);
+        if (next !== ink) onChange(next);
     }
 
     function onPointerMove(e: PointerEvent<HTMLDivElement>) {
@@ -101,9 +108,9 @@ export function PixelEditor({ pattern, onChange }: Props) {
         const cell = cellAt(e.target, e.clientX, e.clientY);
         if (!cell) return;
         // Moves can arrive faster than re-renders, so build on the stroke's own copy.
-        const next = togglePixel(current.pattern, cell.row, cell.col, current.value);
-        if (next === current.pattern) return;
-        current.pattern = next;
+        const next = setInk(current.ink, base, cell.row, cell.col, current.value);
+        if (next === current.ink) return;
+        current.ink = next;
         onChange(next);
     }
 
@@ -117,7 +124,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
     // already handled on pointerdown.
     function onCellClick(e: MouseEvent<HTMLButtonElement>, row: number, col: number) {
         if (e.detail !== 0) return;
-        change(togglePixel(pattern, row, col, mode === 'erase' ? false : undefined));
+        change(setInk(ink, base, row, col, mode === 'erase' ? false : !pattern[row]?.[col]));
     }
 
     function undo() {
@@ -129,15 +136,15 @@ export function PixelEditor({ pattern, onChange }: Props) {
 
     function addColumn() {
         if (width >= MAX_COLUMNS) return;
-        change(pattern.map((row) => [...row, false]));
+        change(resizeInk(ink, width + 1));
     }
 
     function removeColumn() {
-        if (width <= 1) return;
-        change(pattern.map((row) => row.slice(0, -1)));
+        if (width <= minColumns) return;
+        change(resizeInk(ink, width - 1));
     }
 
-    // Same look as the Text/Draw switch above, so both read as "pick one".
+    // Segmented like GitHub's switches, so the two tools read as "pick one".
     const toolClass = (on: boolean) =>
         `rounded-[5px] border px-3 py-[3px] text-sm ${on ? 'border-line bg-canvas font-semibold' : 'border-transparent hover:text-fg text-muted'}`;
     const stepClass = 'btn w-8 px-0';
@@ -147,7 +154,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
             <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Pixel editor tools">
                 <div role="group" aria-label="Tool" className="flex rounded-md bg-btn-hover p-0.5">
                     <button type="button" aria-pressed={mode === 'paint'} onClick={() => setMode('paint')} className={toolClass(mode === 'paint')}>
-                        Paint
+                        Draw
                     </button>
                     <button type="button" aria-pressed={mode === 'erase'} onClick={() => setMode('erase')} className={toolClass(mode === 'erase')}>
                         Erase
@@ -156,7 +163,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
                 <button type="button" onClick={undo} disabled={history.length === 0} className="btn">
                     Undo
                 </button>
-                <button type="button" onClick={() => change(emptyPattern(width))} disabled={litCount(pattern) === 0} className="btn">
+                <button type="button" onClick={() => change(resizeInk(null, width))} disabled={!hasInk(ink)} className="btn" aria-label="Clear drawing">
                     Clear
                 </button>
             </div>
@@ -194,7 +201,7 @@ export function PixelEditor({ pattern, onChange }: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                    <button type="button" onClick={removeColumn} disabled={width <= 1} className={stepClass} aria-label="Remove column">
+                    <button type="button" onClick={removeColumn} disabled={width <= minColumns} className={stepClass} aria-label="Remove column">
                         −
                     </button>
                     <span className="tabular-nums">

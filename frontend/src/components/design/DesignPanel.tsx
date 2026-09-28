@@ -3,18 +3,19 @@ import {
     bestOffset,
     buildPreview,
     cellKey,
+    composeInk,
     defaultOffset,
-    emptyPattern,
+    inkWidth,
     maxOffset as maxOffsetFor,
     patternWidth,
-    textToPattern,
+    textLayer,
     todayUtc,
     trimPattern,
 } from '../../lib/design';
 import { clearDraft, loadDraft, saveDraft, type Draft } from '../../lib/draft';
 import { defaultRepoName, repoNameError, type PaintRequest, type PaintResult } from '../../lib/paint';
 import { signInUrl, useMe } from '../../lib/auth';
-import type { Calendar, Pattern, Shade } from '../../lib/types';
+import type { Calendar, Shade } from '../../lib/types';
 import { Graph, GraphLegend } from '../Graph';
 import { PaintAction } from './PaintAction';
 import { Row } from './Row';
@@ -22,6 +23,7 @@ import { PaintDone } from './PaintDone';
 import { PixelEditor } from './PixelEditor';
 import { PlacementControls } from './PlacementControls';
 import { ShadePicker } from './ShadePicker';
+import { StickerPicker } from './StickerPicker';
 import { ShareButtons } from '../share/ShareButtons';
 
 interface Props {
@@ -33,21 +35,17 @@ interface Props {
 // Letters are 5 columns plus a gap and the graph is 53 wide, so only about 8 fit.
 // A little slack lets people type and then see the "too wide" warning.
 const MAX_TEXT = 12;
+// Room to draw in before anything is typed.
 const BLANK_WIDTH = 20;
 
-// Text gets a blank column either side in the editor, so it can be touched up at the edges.
-function editorStart(text: string): Pattern {
-    const pattern = textToPattern(text);
-    const width = patternWidth(pattern);
-    if (width === 0) return emptyPattern(BLANK_WIDTH);
-    return pattern.map((row) => [false, ...row, false]);
+// Counts characters, not UTF-16 units, so a sticker costs one like a letter.
+function clip(text: string) {
+    return Array.from(text).slice(0, MAX_TEXT).join('');
 }
 
 function fresh(login: string, year: number | undefined): Draft {
-    return { login, year, source: 'text', text: '', drawn: null, offset: null, shade: 4, repoName: null, isPrivate: false };
+    return { login, year, text: '', ink: null, offset: null, shade: 4, repoName: null, isPrivate: false };
 }
-
-const TABS = ['text', 'draw'] as const;
 
 export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const [draft, setDraft] = useState<Draft>(() => loadDraft(calendar.login, year) ?? fresh(calendar.login, year));
@@ -55,6 +53,8 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
     const [done, setDone] = useState<PaintResult | null>(null);
     const { data: me } = useMe();
     const graphRef = useRef<HTMLDivElement>(null);
+    // Where stickers go: the caret's last spot, or the end if the box was never touched.
+    const caret = useRef<number | null>(null);
 
     useEffect(() => {
         if (!done) saveDraft(draft);
@@ -64,10 +64,10 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
 
     const mode = year ? 'year' : 'rolling';
     const today = todayUtc();
-    const placed = useMemo(
-        () => trimPattern(draft.source === 'draw' && draft.drawn ? draft.drawn : textToPattern(draft.text)),
-        [draft.source, draft.drawn, draft.text],
-    );
+    const base = useMemo(() => textLayer(draft.text), [draft.text]);
+    const placed = useMemo(() => trimPattern(composeInk(base, draft.ink)), [base, draft.ink]);
+    const minColumns = Math.max(1, patternWidth(base));
+    const columns = Math.max(minColumns, draft.ink ? inkWidth(draft.ink) : BLANK_WIDTH);
     const width = patternWidth(placed);
     const tooWide = width > calendar.weeks.length;
     const maxOffset = maxOffsetFor(calendar, placed);
@@ -75,14 +75,14 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
 
     const preview = useMemo(() => buildPreview(calendar, placed, offset, draft.shade, today), [calendar, placed, offset, draft.shade, today]);
 
-    const repoName = draft.repoName ?? defaultRepoName(draft.text || (draft.source === 'draw' ? 'pixels' : ''));
+    const repoName = draft.repoName ?? defaultRepoName(draft.text);
     const repoError = repoNameError(repoName) ?? serverRepoError;
     const hasRepoScope = Boolean(me?.scopes.includes('repo'));
 
     // The rows above already explain fit, repo name and permission problems in place.
     const blocked = width === 0 || tooWide || preview.misfits > 0 || Boolean(repoError) || (draft.isPrivate && !hasRepoScope);
     let note: string | null = null;
-    if (width === 0) note = draft.source === 'text' ? 'Type some text to paint.' : 'Draw something to paint.';
+    if (width === 0) note = 'Type or draw something to paint.';
     else if (!blocked && mode === 'rolling') note = 'Slides off this graph within a year. Pick a year to keep it.';
 
     const request: PaintRequest | null =
@@ -98,6 +98,13 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                   repoName,
                   isPrivate: draft.isPrivate,
               };
+
+    function addSticker(char: string) {
+        const at = Math.min(caret.current ?? draft.text.length, draft.text.length);
+        const text = clip(draft.text.slice(0, at) + char + draft.text.slice(at));
+        caret.current = at + char.length;
+        update({ text });
+    }
 
     function findBest() {
         const best = bestOffset(calendar, placed, mode, today);
@@ -137,52 +144,32 @@ export function DesignPanel({ calendar, year, onShowMine }: Props) {
                 </PaintDone>
             ) : (
                 <div className="box">
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-md border-b border-line bg-subtle px-4 py-3">
+                    <div className="rounded-t-md border-b border-line bg-subtle px-4 py-3">
                         <h3 className="text-sm font-semibold">Design</h3>
-                        <div role="tablist" aria-label="Design with" className="flex rounded-md bg-btn-hover p-0.5">
-                            {TABS.map((tab) => (
-                                <button
-                                    key={tab}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={draft.source === tab}
-                                    onClick={() =>
-                                        update(
-                                            tab === 'draw' && !draft.drawn
-                                                ? { source: tab, drawn: editorStart(draft.text) }
-                                                : { source: tab },
-                                        )
-                                    }
-                                    className={`rounded-[5px] border px-3 py-0.5 text-sm ${
-                                        draft.source === tab
-                                            ? 'border-line bg-canvas font-semibold'
-                                            : 'border-transparent text-muted hover:text-fg'
-                                    }`}
-                                >
-                                    {tab === 'text' ? 'Text' : 'Draw'}
-                                </button>
-                            ))}
-                        </div>
                     </div>
 
-                    {draft.source === 'text' ? (
-                        <Row label={<label htmlFor="paint-text">Text</label>}>
-                            <input
-                                id="paint-text"
-                                value={draft.text}
-                                maxLength={MAX_TEXT}
-                                onChange={(e) => update({ text: e.target.value })}
-                                placeholder="HIRE ME"
-                                autoComplete="off"
-                                className="input w-full font-mono tracking-[0.2em] uppercase sm:max-w-xs"
-                            />
-                            <p className="text-sm text-muted">About 8 letters fit.</p>
-                        </Row>
-                    ) : (
-                        <Row label="Pixels">
-                            <PixelEditor pattern={draft.drawn ?? emptyPattern(BLANK_WIDTH)} onChange={(drawn) => update({ drawn })} />
-                        </Row>
-                    )}
+                    <Row label={<label htmlFor="paint-text">Text</label>}>
+                        <input
+                            id="paint-text"
+                            value={draft.text}
+                            onChange={(e) => {
+                                caret.current = e.target.selectionStart;
+                                update({ text: clip(e.target.value) });
+                            }}
+                            onSelect={(e) => {
+                                caret.current = e.currentTarget.selectionStart;
+                            }}
+                            placeholder="HIRE ME"
+                            autoComplete="off"
+                            className="input w-full font-mono tracking-[0.2em] uppercase sm:max-w-xs"
+                        />
+                        <p className="text-sm text-muted">About 8 letters fit. Tap a sticker to add it at the cursor.</p>
+                        <StickerPicker onPick={addSticker} />
+                    </Row>
+
+                    <Row label="Draw">
+                        <PixelEditor base={base} ink={draft.ink} columns={columns} minColumns={minColumns} onChange={(ink) => update({ ink })} />
+                    </Row>
 
                     {width > 0 && (
                         <PlacementControls

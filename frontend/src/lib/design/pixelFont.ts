@@ -1,6 +1,9 @@
+import { STICKER_ALIASES, STICKERS } from './stickers';
+
 // A 5x7 uppercase pixel font for writing into a contribution graph. Glyphs use
 // all 7 rows (Sunday to Saturday) so diagonals in letters like V, M, N and K
-// have room to read as diagonals. Most glyphs are 5 wide, V is 9; '1' = filled.
+// have room to read as diagonals. Most glyphs are 5 wide, V is 9 and stickers
+// go up to 11; '1' = filled.
 export const GLYPH_HEIGHT = 7;
 
 export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
@@ -57,7 +60,7 @@ export const GLYPHS: Readonly<Record<string, readonly string[]>> = {
     '/': ['00001', '00001', '00010', '00100', '01000', '10000', '10000'],
     '#': ['01010', '01010', '11111', '01010', '11111', '01010', '01010'],
     '&': ['01100', '10010', '10100', '01000', '10101', '10010', '01101'],
-    '♥': ['00000', '01010', '11111', '11111', '11111', '01110', '00100'],
+    ...Object.fromEntries(STICKERS.map((s) => [s.char, s.rows])),
 };
 
 // Unknown characters render as a blank so typing never throws or drops a gap.
@@ -69,7 +72,8 @@ export function glyphFor(ch: string): readonly string[] {
 // two columns wide, so a word break comes out as four blank columns.
 export function renderText(text: string): boolean[][] {
     const rows: boolean[][] = Array.from({ length: GLYPH_HEIGHT }, () => []);
-    const chars = Array.from(text.toUpperCase());
+    // Emoji keyboards add invisible style and joiner marks that would render as gaps.
+    const chars = Array.from(text.toUpperCase().replace(/[\uFE0E\uFE0F\u200D]/g, '')).map((ch) => STICKER_ALIASES[ch] ?? ch);
 
     chars.forEach((ch, i) => {
         const glyph = glyphFor(ch);

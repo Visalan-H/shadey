@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { GLYPH_HEIGHT, GLYPHS, glyphFor, renderText } from './pixelFont';
 
 describe('pixel font', () => {
-    it('has every glyph at 7 rows by at most 9 columns, rows of equal width', () => {
+    it('has every glyph at 7 rows by at most 11 columns, rows of equal width', () => {
         for (const [ch, glyph] of Object.entries(GLYPHS)) {
             expect(glyph, ch).toHaveLength(GLYPH_HEIGHT);
             const width = glyph[0]!.length;
             expect(width, ch).toBeGreaterThanOrEqual(1);
-            expect(width, ch).toBeLessThanOrEqual(9);
+            expect(width, ch).toBeLessThanOrEqual(11);
             for (const row of glyph) {
                 expect(row, ch).toMatch(/^[01]+$/);
                 expect(row.length, ch).toBe(width);
@@ -52,5 +52,12 @@ describe('pixel font', () => {
 
     it('returns 7 empty rows for empty text', () => {
         expect(renderText('')).toEqual([[], [], [], [], [], [], []]);
+    });
+
+    it('draws emoji keyboard versions like the sticker', () => {
+        expect(renderText('❤️')).toEqual(renderText('♥'));
+        expect(renderText('⭐')).toEqual(renderText('★'));
+        // One sticker is one glyph: no stray gap from the surrogate pair.
+        expect(renderText('💀')[0]).toHaveLength(7);
     });
 });
