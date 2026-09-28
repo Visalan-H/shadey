@@ -16,7 +16,7 @@ import { useTestDb } from '../test/mongo.js';
 vi.mock('../db.js', () => ({ connectDb: async () => undefined }));
 
 setAuthEnv();
-process.env.ADMIN_LOGINS = 'Boss, other';
+process.env.ADMIN_GITHUB_IDS = '9001, 9002';
 useTestDb();
 
 const revoked: string[] = [];
@@ -37,8 +37,8 @@ beforeEach(async () => {
 const app = createApp();
 
 let nextId = 1;
-async function signIn(login: string) {
-    const user = await User.create({ githubId: nextId++, login, name: null, avatarUrl: '', tokenEnc: encrypt(`gho_${login}`), scopes: [] });
+async function signIn(login: string, githubId = nextId++) {
+    const user = await User.create({ githubId, login, name: null, avatarUrl: '', tokenEnc: encrypt(`gho_${login}`), scopes: [] });
     return { user, cookie: `gp_session=${await createSession(user.id)}` };
 }
 
@@ -97,12 +97,18 @@ describe('admin review', () => {
         expect(me.body.user.admin).toBeUndefined();
     });
 
+    it("doesn't trust a login: another account named like an admin stays out", async () => {
+        const { cookie } = await signIn('boss');
+        expect((await request(app).get('/api/admin/reports').set('Cookie', cookie)).status).toBe(404);
+        expect((await request(app).get('/api/auth/me').set('Cookie', cookie)).body.user.admin).toBeUndefined();
+    });
+
     it('lists reports, takes a painting down and puts it back', async () => {
         const { user } = await signIn('octo');
         await makePainting(user._id, 'abc');
         await report('abc', { reason: 'rude' }, { 'x-real-ip': '1.1.1.1' });
         await report('abc', {}, { 'x-real-ip': '2.2.2.2' });
-        const { cookie } = await signIn('boss');
+        const { cookie } = await signIn('boss', 9001);
         expect((await request(app).get('/api/auth/me').set('Cookie', cookie)).body.user.admin).toBe(true);
 
         const list = await request(app).get('/api/admin/reports').set('Cookie', cookie);
