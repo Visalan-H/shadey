@@ -53,6 +53,20 @@ afterEach(() => {
 });
 
 describe('HomePage', () => {
+    it("shows the signed-in user's own graph when the URL names nobody", async () => {
+        const fetch = vi.fn(async (url: string) =>
+            url === '/api/auth/me'
+                ? new Response(JSON.stringify({ user: { login: 'Octocat', name: null, avatarUrl: '', githubId: 1, scopes: [] } }))
+                : new Response(JSON.stringify(calendar)),
+        );
+        vi.stubGlobal('fetch', fetch);
+        renderAt('/');
+
+        expect(await screen.findByText(/12 contributions in the last year/)).toBeInTheDocument();
+        expect(screen.getByLabelText('GitHub username')).toHaveValue('Octocat');
+        expect(fetch).toHaveBeenCalledWith('/api/calendar/Octocat', expect.anything());
+    });
+
     it('looks up a username and shows the graph', async () => {
         const fetch = mockFetch(200, calendar);
         renderAt('/');
@@ -102,6 +116,6 @@ describe('HomePage', () => {
         await userEvent.type(screen.getByLabelText('GitHub username'), 'bad_name');
         await userEvent.click(screen.getByRole('button', { name: 'Show graph' }));
         expect(screen.getByText(/doesn't look like a GitHub username/)).toBeInTheDocument();
-        expect(fetch).not.toHaveBeenCalled();
+        expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/calendar'), expect.anything());
     });
 });

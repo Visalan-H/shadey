@@ -28,6 +28,19 @@ afterEach(() => {
 });
 
 describe('AuthButton', () => {
+    it('shows the sign-in link before the session check returns', () => {
+        vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+        renderAt('/');
+        expect(screen.getByRole('link', { name: /sign in with github/i })).toBeInTheDocument();
+    });
+
+    it('holds the spot for visitors who were signed in last time', () => {
+        localStorage.setItem('shadey:login', 'mona');
+        vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+        renderAt('/');
+        expect(screen.queryByRole('link', { name: /sign in with github/i })).not.toBeInTheDocument();
+    });
+
     it('links signed-out visitors to GitHub sign-in, returning to the current page', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => json({ user: null })));
         renderAt('/draw?text=hi');

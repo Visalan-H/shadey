@@ -1,13 +1,14 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router';
-import { signInUrl, useMe, useSignOut, type Me } from '../lib/auth';
+import { loginHint, signInUrl, useMe, useSignOut, type Me } from '../lib/auth';
 
 export function AuthButton() {
     const { data: me, isPending } = useMe();
     const location = useLocation();
 
-    // Render nothing until we know, so the header doesn't flash "Sign in" for signed-in users.
-    if (isPending) return <div className="h-9 w-9" aria-hidden="true" />;
+    // Visitors who were signed in last time get a blank slot, so "Sign in" doesn't flash
+    // before their menu. Everyone else sees the button right away.
+    if (isPending && loginHint()) return <div className="h-9 w-9" aria-hidden="true" />;
     if (!me) {
         return (
             <a
