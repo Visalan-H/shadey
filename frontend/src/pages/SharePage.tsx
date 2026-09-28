@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router';
 import { Graph } from '../components/Graph';
+import { ReportPainting } from '../components/share/ReportPainting';
 import { ShareButtons } from '../components/share/ShareButtons';
 import { ApiError } from '../lib/api';
 import { paintingCalendar, useSharedPainting, type SharedPainting } from '../lib/share';
@@ -23,10 +24,11 @@ export function SharePage() {
     }
 
     if (error || data.status === 'deleted') {
-        const notFound = error instanceof ApiError && error.status === 404;
+        const status = error instanceof ApiError ? error.status : null;
         let message = 'Something went wrong loading this painting.';
         if (data?.status === 'deleted') message = `@${data.login} removed this painting.`;
-        else if (notFound) message = "This painting doesn't exist.";
+        else if (status === 404) message = "This painting doesn't exist.";
+        else if (status === 410) message = 'This painting was taken down.';
         return (
             <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 px-4 py-8">
                 <p className="text-lg">{message}</p>
@@ -96,6 +98,7 @@ function Painting({ painting }: { painting: SharedPainting }) {
                     Paint yours
                 </Link>
             </div>
+            <ReportPainting shareId={painting.shareId} />
         </div>
     );
 }

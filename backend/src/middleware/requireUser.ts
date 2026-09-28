@@ -1,5 +1,6 @@
 import type { Request, RequestHandler } from 'express';
 import { connectDb } from '../db.js';
+import { env } from '../env.js';
 import { User, type UserDoc } from '../models/User.js';
 import { decrypt } from '../services/crypto.js';
 import { readSession } from '../services/session.js';
@@ -33,3 +34,22 @@ export function getUserToken(user: UserDoc): string {
     if (!user.tokenEnc) throw new Error('User loaded without tokenEnc');
     return decrypt(user.tokenEnc);
 }
+
+export function isAdmin(login: string): boolean {
+    const admins = (env().ADMIN_LOGINS ?? '')
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+    return admins.includes(login.toLowerCase());
+}
+
+export const requireAdmin: RequestHandler = async (req, res, next) => {
+    const user = await loadSessionUser(req);
+    // Same answer as a missing route, so the admin API doesn't advertise itself.
+    if (!user || !isAdmin(user.login)) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+    }
+    req.user = user;
+    next();
+};

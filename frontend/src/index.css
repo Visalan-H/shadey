@@ -111,6 +111,9 @@
     .btn-primary {
         @apply border-primary-line bg-primary text-white hover:bg-primary-hover disabled:hover:bg-primary;
     }
+    .btn-danger {
+        @apply text-danger hover:border-danger hover:bg-danger hover:text-white disabled:hover:border-line disabled:hover:bg-btn disabled:hover:text-danger;
+    }
     .btn-lg {
         @apply px-4 py-[7px];
     }

@@ -2,10 +2,13 @@ import { generateState } from 'arctic';
 import { Router } from 'express';
 import { connectDb } from '../db.js';
 import { env } from '../env.js';
-import { loadSessionUser } from '../middleware/requireUser.js';
+import { getUserToken, isAdmin, loadSessionUser, requireUser } from '../middleware/requireUser.js';
+import { PaintingModel } from '../models/Painting.js';
+import { ReportModel } from '../models/Report.js';
 import { User } from '../models/User.js';
+import { forgetCalendars } from '../services/calendar.js';
 import { encrypt } from '../services/crypto.js';
-import { BASE_SCOPES, fetchProfile, githubClient, isExtraScope } from '../services/githubOAuth.js';
+import { BASE_SCOPES, fetchProfile, githubClient, isExtraScope, revokeGrant } from '../services/githubOAuth.js';
 import { cookieOptions, endSession, signToken, startSession, verifyToken } from '../services/session.js';
 
 export const router = Router();
@@ -83,7 +86,24 @@ router.get('/me', async (req, res) => {
         return;
     }
     const { login, name, avatarUrl, githubId, scopes } = user;
-    res.json({ user: { login, name, avatarUrl, githubId, scopes } });
+    res.json({ user: { login, name, avatarUrl, githubId, scopes, ...(isAdmin(login) ? { admin: true } : {}) } });
+});
+
+// Deletes everything Shadey stores about the user and removes the app from their GitHub
+// account. Painted repos belong to the user and stay on GitHub.
+router.delete('/me', requireUser, async (req, res) => {
+    const user = req.user!;
+    const token = getUserToken(user);
+    await connectDb();
+    const shareIds = await PaintingModel.distinct('shareId', { userId: user._id });
+    await ReportModel.deleteMany({ shareId: { $in: shareIds } });
+    await PaintingModel.deleteMany({ userId: user._id });
+    await forgetCalendars(user.login).catch((e: unknown) => console.error('Clearing cached graphs failed', e));
+    await user.deleteOne();
+    const revoked = await revokeGrant(token);
+    if (!revoked) console.error('Revoking the GitHub grant failed for', user.login);
+    endSession(res);
+    res.status(204).end();
 });
 
 router.post('/logout', (_req, res) => {

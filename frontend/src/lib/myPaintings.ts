@@ -7,7 +7,8 @@ export interface PaintingSummary {
     repoName: string;
     repoUrl: string;
     isPrivate: boolean;
-    status: 'painted' | 'deleted';
+    // hidden: the share page was taken down after a report.
+    status: 'painted' | 'deleted' | 'hidden';
     createdAt: string;
     totalCommits: number;
 }

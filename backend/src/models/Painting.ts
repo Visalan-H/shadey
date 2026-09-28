@@ -2,7 +2,8 @@ import mongoose, { Schema, type HydratedDocument, type Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import type { Level, Pattern } from '../types.js';
 
-export type PaintingStatus = 'painted' | 'deleted';
+// hidden = taken down after a report; the repo and the owner's list are unaffected.
+export type PaintingStatus = 'painted' | 'deleted' | 'hidden';
 
 export interface Placement {
     // rolling = the last 53 weeks ending today; year = a calendar year's graph.
@@ -91,7 +92,7 @@ const paintingSchema = new Schema<Painting>(
         totalCommits: { type: Number, required: true, min: 1 },
         cells: { type: [cellSchema], required: true },
         topUps: { type: Number, default: 0, min: 0 },
-        status: { type: String, enum: ['painted', 'deleted'], default: 'painted', required: true },
+        status: { type: String, enum: ['painted', 'deleted', 'hidden'], default: 'painted', required: true },
     },
     { timestamps: true },
 );

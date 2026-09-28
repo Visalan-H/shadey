@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api, ApiError } from './api';
 import type { Calendar, CalendarDay, Level, Pattern } from './types';
 
@@ -22,6 +22,16 @@ export function useSharedPainting(shareId: string) {
         queryKey: ['painting', shareId],
         queryFn: () => api<SharedPainting>(`/api/paintings/${encodeURIComponent(shareId)}`),
         retry: (failures, err) => failures < 1 && !(err instanceof ApiError && err.status < 500),
+    });
+}
+
+export function useReportPainting(shareId: string) {
+    return useMutation({
+        mutationFn: (reason: string) =>
+            api<unknown>(`/api/paintings/${encodeURIComponent(shareId)}/report`, {
+                method: 'POST',
+                body: JSON.stringify({ reason: reason.trim() || undefined }),
+            }),
     });
 }
 

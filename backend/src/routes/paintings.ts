@@ -213,6 +213,10 @@ export function createPaintingsRouter(deps: PaintingsDeps = {}) {
             res.status(404).json({ error: 'Painting not found' });
             return;
         }
+        if (p.status === 'hidden') {
+            res.status(410).json({ error: 'This painting was taken down' });
+            return;
+        }
         // Private repos 404 for everyone else anyway; the pattern itself is still shareable.
         res.json({
             shareId: p.shareId,

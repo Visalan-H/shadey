@@ -12,6 +12,8 @@ const schema = z.object({
     TOKEN_ENCRYPTION_KEY: z.string().min(1),
     // Public frontend origin, e.g. https://shadey.vercel.app (OAuth callbacks, share links).
     APP_URL: z.string().url(),
+    // Comma-separated GitHub logins that can review reports and take paintings down.
+    ADMIN_LOGINS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
