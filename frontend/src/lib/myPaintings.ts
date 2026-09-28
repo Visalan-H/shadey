@@ -23,7 +23,7 @@ export function useMyPaintings(enabled: boolean) {
     });
 }
 
-// "Delete for me" leaves for GitHub (a one-off delete_repo grant) and comes back to /me.
+// "Delete for me" posts here, leaves for GitHub (a one-off delete_repo grant) and comes back to /me.
 export function deleteForMeUrl(shareId: string) {
     return `/api/auth/delete?${new URLSearchParams({ painting: shareId })}`;
 }

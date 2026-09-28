@@ -89,7 +89,9 @@ describe('MyPaintingsPage', () => {
         renderAt();
         const row = (await screen.findByRole('heading', { name: 'HI' })).closest('li')!;
         expect(within(row).getByText(/42 commits/)).toBeInTheDocument();
-        expect(within(row).getByRole('link', { name: 'Delete for me' })).toHaveAttribute('href', '/api/auth/delete?painting=abc');
+        const deleteForMe = within(row).getByRole('button', { name: 'Delete for me' });
+        expect(deleteForMe.closest('form')).toHaveAttribute('action', '/api/auth/delete?painting=abc');
+        expect(deleteForMe.closest('form')).toHaveAttribute('method', 'post');
         expect(within(row).getByRole('link', { name: 'Share page' })).toHaveAttribute('href', '/p/abc');
 
         await userEvent.click(within(row).getByRole('button', { name: 'Delete it myself' }));
@@ -102,7 +104,7 @@ describe('MyPaintingsPage', () => {
         await userEvent.click(await screen.findByRole('button', { name: 'Delete it myself' }));
         await userEvent.click(screen.getByRole('button', { name: "I've deleted it" }));
         expect(await screen.findByText(/is gone and the share page says so/)).toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: 'Delete for me' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete for me' })).not.toBeInTheDocument();
     });
 
     it('explains when GitHub still has the repo', async () => {
