@@ -78,7 +78,7 @@ export function buildCommits(input: { plan: PlanDay[]; author: CommitAuthor; sta
     for (const { start, count } of days) {
         for (let i = 0; i < count; i++) {
             commits.push({
-                message: 'Paint',
+                message: `Shadey painting ${i + 1}/${count}`,
                 author: { name: author.name, email: author.email, timestamp: start + i, timezoneOffset: 0 },
             });
         }
