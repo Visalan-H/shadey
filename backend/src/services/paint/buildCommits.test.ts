@@ -22,10 +22,13 @@ describe('buildCommits', () => {
         const noon1 = Date.UTC(2025, 2, 1, 12) / 1000;
         const noon2 = Date.UTC(2025, 2, 2, 12) / 1000;
         expect(commits.map((c) => c.author.timestamp)).toEqual([noon1, noon2, noon2 + 1, noon2 + 2]);
-        for (const c of commits) {
-            expect(c.author).toMatchObject({ ...author, timezoneOffset: 0 });
-            expect(c.message).toBe('Paint');
-        }
+        for (const c of commits) expect(c.author).toMatchObject({ ...author, timezoneOffset: 0 });
+        expect(commits.map((c) => c.message)).toEqual([
+            'Shadey painting 1/1',
+            'Shadey painting 1/3',
+            'Shadey painting 2/3',
+            'Shadey painting 3/3',
+        ]);
     });
 
     it('accepts the limits exactly', () => {
